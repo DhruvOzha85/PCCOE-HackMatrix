@@ -27,14 +27,14 @@ export const HELP_CATEGORIES = [
     id: 'getting-started',
     title: 'Getting Started',
     icon: 'Compass',
-    description: 'Create your account, understand how HackMatrix works, and explore your dashboard.',
+    description: 'Create your account, understand how FIN works, and explore your dashboard.',
     audience: 'all',
     articles: [
       {
         id: 'gs-account-creation',
         title: 'Creating an Account & Roles',
         summary: 'Learn about Citizen and Government Officer account types.',
-        content: `HackMatrix is designed for two types of users:
+        content: `FIN is designed for two types of users:
 
 - Citizen (Applicant): Look for government schemes, upload and store certificates, test your eligibility, and submit direct applications.
 - Review Officer: For authorized government staff to review submitted documents, verify certificates, and approve scheme applications.
@@ -45,7 +45,7 @@ Simply sign up with your email and password to begin exploring benefits you may 
         id: 'gs-profile-setup',
         title: 'Filling in Your Profile',
         summary: 'Why your age, state, category, and income are important.',
-        content: `Your profile helps HackMatrix find the exact schemes you qualify for:
+        content: `Your profile helps FIN find the exact schemes you qualify for:
 
 - Full Name & Date of Birth: Determines if you qualify for age-based benefits, like youth scholarships or senior citizen pensions.
 - State and District: Helps show schemes for your home state along with Central Government policies.
@@ -59,7 +59,7 @@ Tip: Keeping your details accurate and matching your official certificates gives
         id: 'gs-dashboard-navigation',
         title: 'Using Your Dashboard',
         summary: 'A quick tour of your home page and overview cards.',
-        content: `Your Dashboard (/dashboard) is your home base in HackMatrix:
+        content: `Your Dashboard (/dashboard) is your home base in FIN:
 
 1. Welcome Banner: Shows a greeting and quick orientation.
 2. Metric Counters: Quickly see how many schemes you qualify for, total potential benefit money, verified documents in your vault, and your active applications.
@@ -121,7 +121,7 @@ Please note: Benefit amounts are the statutory ceilings set by government rules.
         id: 'el-four-classifications',
         title: 'The Four Eligibility Results Explained',
         summary: 'What Satisfied, Unmet, Missing Evidence, and Conflicting Evidence mean.',
-        content: `When you check a scheme, HackMatrix explains each condition in one of four simple categories:
+        content: `When you check a scheme, FIN explains each condition in one of four simple categories:
 
 1. Satisfied Conditions (Green):
 You meet this condition based on your profile and verified certificates.
@@ -296,9 +296,9 @@ Click the Export Dossier button on the My Documents page to get a clean package 
         id: 'bp-benefit-disclaimers',
         title: 'Important Note on Benefit Estimates',
         summary: 'Why displayed numbers are official policy maximums.',
-        content: `All benefit numbers shown in HackMatrix (for example, "₹1,500/month" or "Up to ₹50,000") are official policy maximums published in government guidelines.
+        content: `All benefit numbers shown in FIN (for example, "₹1,500/month" or "Up to ₹50,000") are official policy maximums published in government guidelines.
 
-Actual payment depends on final department approval and budget clearance. HackMatrix helps you discover schemes and apply easily, but the government department makes the final decision.`
+Actual payment depends on final department approval and budget clearance. FIN helps you discover schemes and apply easily, but the government department makes the final decision.`
       }
     ]
   },

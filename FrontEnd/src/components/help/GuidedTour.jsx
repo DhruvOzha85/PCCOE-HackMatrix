@@ -23,7 +23,7 @@ export const TOUR_STEPS = [
     icon: Compass,
     path: '/dashboard',
     selector: '.hero-banner, .dashboard-layout, .metric-cards-grid',
-    description: 'Welcome to HackMatrix! Your dashboard aggregates your verified eligibility metrics, potential financial benefits, and top government welfare opportunities tailored to your profile.'
+    description: 'Welcome to FIN! Your dashboard aggregates your verified eligibility metrics, potential financial benefits, and top government welfare opportunities tailored to your profile.'
   },
   {
     id: 'complete-profile',
