@@ -4,8 +4,10 @@ import PageContainer from '../components/layout/PageContainer';
 import {
   fetchReviewerApplicationsQueue,
   fetchApplicationReviewDetails,
-  submitReviewDecision
+  submitReviewDecision,
+  verifyDocumentStatus
 } from '../services/reviewerService';
+import { resolveEvidenceConflict } from '../services/schemeService';
 import {
   ShieldCheck,
   Search,
@@ -54,6 +56,14 @@ export default function ReviewApplicationsPage() {
   });
   const [submittingDecision, setSubmittingDecision] = useState(false);
   const [successToast, setSuccessToast] = useState(null);
+  const [verifyingDocId, setVerifyingDocId] = useState(null);
+  const [docActionError, setDocActionError] = useState(null);
+
+  // Addition 2: Conflict resolution state
+  const [resolvingConflictId, setResolvingConflictId] = useState(null);
+  const [conflictReason, setConflictReason] = useState('');
+  const [selectedAuthoritativeSource, setSelectedAuthoritativeSource] = useState('DOCUMENT');
+  const [isSubmittingConflictResolution, setIsSubmittingConflictResolution] = useState(false);
 
   // Fetch queue
   const loadQueue = async () => {
@@ -452,6 +462,13 @@ export default function ReviewApplicationsPage() {
                         <span>Associated Verification Documents ({appDetails.documents.length})</span>
                       </h4>
 
+                      {docActionError && (
+                        <div style={{ padding: '8px 12px', background: '#FEE2E2', color: '#B91C1C', borderRadius: '6px', marginBottom: '12px', fontSize: '13px' }}>
+                          <AlertTriangle size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' }} />
+                          {docActionError}
+                        </div>
+                      )}
+
                       {appDetails.documents.length === 0 ? (
                         <div style={{ padding: '16px', background: '#F8FAFC', borderRadius: '8px', color: '#64748B', fontSize: '13px' }}>
                           No documents uploaded for this application.
@@ -468,7 +485,7 @@ export default function ReviewApplicationsPage() {
                                   <h5 className="review-doc-name">{doc.fileName || doc.documentType}</h5>
                                   <div className="review-doc-meta">
                                     <span>Type: {doc.documentType}</span>
-                                    <span>Status: <strong>{doc.verificationStatus}</strong></span>
+                                    <span>Status: <strong style={{ color: doc.verificationStatus === 'VERIFIED' ? '#16A34A' : '#D97706' }}>{doc.verificationStatus}</strong></span>
                                     {doc.ocr?.confidence && (
                                       <span className="ocr-chip">
                                         OCR Confidence: {Math.round(doc.ocr.confidence * 100)}%
@@ -478,7 +495,68 @@ export default function ReviewApplicationsPage() {
                                 </div>
                               </div>
 
-                              <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {doc.verificationStatus !== 'VERIFIED' ? (
+                                  <button
+                                    type="button"
+                                    disabled={verifyingDocId === doc.id}
+                                    onClick={async (e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setDocActionError(null);
+                                      setVerifyingDocId(doc.id);
+                                      try {
+                                        await verifyDocumentStatus(doc.id, 'VERIFIED');
+                                        setAppDetails(prev => prev ? ({
+                                          ...prev,
+                                          documents: prev.documents.map(d => d.id === doc.id ? { ...d, verificationStatus: 'VERIFIED', isVerified: true } : d)
+                                        }) : prev);
+                                        setSuccessToast(`Document "${doc.fileName || doc.documentType}" marked as VERIFIED.`);
+                                        setTimeout(() => setSuccessToast(null), 3500);
+                                      } catch (err) {
+                                        console.warn('Failed to verify document:', err.message);
+                                        setDocActionError(err.message || 'Failed to verify document');
+                                        setTimeout(() => setDocActionError(null), 5000);
+                                      } finally {
+                                        setVerifyingDocId(null);
+                                      }
+                                    }}
+                                    className="reviewer-action-btn"
+                                    style={{
+                                      background: '#DCFCE7',
+                                      color: '#15803D',
+                                      borderColor: '#86EFAC',
+                                      fontSize: '11.5px',
+                                      padding: '5px 10px',
+                                      cursor: verifyingDocId === doc.id ? 'wait' : 'pointer',
+                                      opacity: verifyingDocId === doc.id ? 0.7 : 1,
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px'
+                                    }}
+                                  >
+                                    <CheckCircle2 size={13} className={verifyingDocId === doc.id ? 'animate-spin' : ''} />
+                                    <span>{verifyingDocId === doc.id ? 'Verifying...' : 'Verify Document'}</span>
+                                  </button>
+                                ) : (
+                                  <span
+                                    style={{
+                                      fontSize: '11.5px',
+                                      fontWeight: 700,
+                                      color: '#15803D',
+                                      backgroundColor: '#DCFCE7',
+                                      border: '1px solid #86EFAC',
+                                      padding: '3px 8px',
+                                      borderRadius: '4px',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px'
+                                    }}
+                                  >
+                                    <Check size={12} />
+                                    <span>Verified</span>
+                                  </span>
+                                )}
                                 {doc.fileUrl ? (
                                   <a
                                     href={doc.fileUrl}
@@ -498,6 +576,172 @@ export default function ReviewApplicationsPage() {
                         </div>
                       )}
                     </div>
+
+                    {/* Addition 2: Cross-Document Conflict Resolution Workflow */}
+                    {appDetails.evidenceConflicts && appDetails.evidenceConflicts.length > 0 && (
+                      <div style={{ marginTop: '20px', padding: '16px', backgroundColor: '#FFF1F2', borderRadius: '10px', border: '1px solid #FECDD3' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                          <AlertTriangle size={18} color="#E11D48" />
+                          <h4 style={{ margin: 0, fontSize: '14.5px', fontWeight: 700, color: '#BE123C' }}>
+                            Cross-Document Discrepancies Requiring Review ({appDetails.evidenceConflicts.length})
+                          </h4>
+                        </div>
+                        <p style={{ margin: '0 0 12px 0', fontSize: '12.5px', color: '#9F1239' }}>
+                          Discrepant factual assertions detected across applicant documents. Official reviewer resolution is required to establish authoritative evidence.
+                        </p>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          {appDetails.evidenceConflicts.map((conf) => {
+                            const isResolved = conf.status === 'RESOLVED';
+                            const isBeingResolved = resolvingConflictId === conf.conflict_id;
+
+                            return (
+                              <div
+                                key={conf.conflict_id}
+                                style={{
+                                  padding: '14px',
+                                  backgroundColor: '#FFFFFF',
+                                  borderRadius: '8px',
+                                  border: `1px solid ${isResolved ? '#BBF7D0' : '#FDA4AF'}`
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                  <div style={{ fontWeight: 700, fontSize: '13px', color: '#881337' }}>
+                                    Category: {conf.field_category}
+                                  </div>
+                                  <span
+                                    style={{
+                                      fontSize: '11px',
+                                      fontWeight: 700,
+                                      padding: '3px 8px',
+                                      borderRadius: '4px',
+                                      backgroundColor: isResolved ? '#DCFCE7' : '#FEE2E2',
+                                      color: isResolved ? '#15803D' : '#BE123C',
+                                      border: `1px solid ${isResolved ? '#86EFAC' : '#FCA5A5'}`
+                                    }}
+                                  >
+                                    {conf.status} ({conf.severity || 'HIGH'} PRIORITY)
+                                  </span>
+                                </div>
+
+                                <p style={{ margin: '0 0 10px 0', fontSize: '12.5px', color: '#4C0519', lineHeight: 1.4 }}>
+                                  {conf.explanation}
+                                </p>
+
+                                {/* Conflicting excerpts comparison */}
+                                {conf.source_excerpts && (
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', marginBottom: '10px' }}>
+                                    {conf.source_excerpts.map((src, sIdx) => (
+                                      <div key={sIdx} style={{ padding: '10px', backgroundColor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0', fontSize: '12px' }}>
+                                        <div style={{ fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                                          Source {sIdx + 1}: {src.source || 'Document'}
+                                        </div>
+                                        <div style={{ fontStyle: 'italic', color: '#475569', marginBottom: '4px' }}>
+                                          &ldquo;{src.excerpt}&rdquo;
+                                        </div>
+                                        {src.value !== undefined && (
+                                          <div style={{ fontWeight: 600, color: '#0F766E' }}>
+                                            Extracted: {typeof src.value === 'number' ? `₹${src.value.toLocaleString('en-IN')}` : String(src.value)}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Resolution Details or Form */}
+                                {isResolved ? (
+                                  <div style={{ padding: '8px 12px', backgroundColor: '#F0FDF4', borderRadius: '6px', border: '1px solid #BBF7D0', fontSize: '12px', color: '#166534' }}>
+                                    <strong>Resolved By:</strong> {conf.resolved_by || 'Caseworker'} | <strong>Audit Reason:</strong> {conf.resolution_reason}
+                                  </div>
+                                ) : isBeingResolved ? (
+                                  <div style={{ padding: '12px', backgroundColor: '#FFF7ED', borderRadius: '6px', border: '1px solid #FED7AA', marginTop: '8px' }}>
+                                    <div style={{ fontWeight: 600, fontSize: '12.5px', color: '#9A3412', marginBottom: '8px' }}>
+                                      Caseworker Resolution Justification (Mandatory)
+                                    </div>
+                                    <div style={{ marginBottom: '8px' }}>
+                                      <label style={{ display: 'block', fontSize: '11.5px', color: '#7C2D12', marginBottom: '4px' }}>
+                                        Authoritative Source Selected:
+                                      </label>
+                                      <select
+                                        value={selectedAuthoritativeSource}
+                                        onChange={(e) => setSelectedAuthoritativeSource(e.target.value)}
+                                        style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #CBD5E1', fontSize: '12px' }}
+                                      >
+                                        <option value="DOCUMENT">Verified Official Document Excerpt</option>
+                                        <option value="USER_INPUT">Citizen Self-Declaration</option>
+                                        <option value="FIELD_INSPECTION">Physical Field Inspection Report</option>
+                                      </select>
+                                    </div>
+                                    <textarea
+                                      rows={2}
+                                      placeholder="State verified official rationale (e.g. Verified latest Tehsildar certificate over self-declared profile estimate)..."
+                                      value={conflictReason}
+                                      onChange={(e) => setConflictReason(e.target.value)}
+                                      style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #CBD5E1', fontSize: '12px', boxSizing: 'border-box' }}
+                                    />
+                                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                                      <button
+                                        type="button"
+                                        disabled={isSubmittingConflictResolution || !conflictReason.trim()}
+                                        onClick={async () => {
+                                          setIsSubmittingConflictResolution(true);
+                                          try {
+                                            await resolveEvidenceConflict(conf.conflict_id, {
+                                              reason: conflictReason.trim(),
+                                              selectedSource: selectedAuthoritativeSource
+                                            });
+                                            conf.status = 'RESOLVED';
+                                            conf.resolution_reason = conflictReason.trim();
+                                            conf.resolved_by = 'Caseworker';
+                                            setResolvingConflictId(null);
+                                            setConflictReason('');
+                                            setSuccessToast(`Discrepancy resolved successfully.`);
+                                            setTimeout(() => setSuccessToast(null), 3500);
+                                          } catch (err) {
+                                            alert(`Failed to resolve conflict: ${err.message}`);
+                                          } finally {
+                                            setIsSubmittingConflictResolution(false);
+                                          }
+                                        }}
+                                        style={{ padding: '6px 14px', backgroundColor: '#0F766E', color: '#FFFFFF', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                                      >
+                                        {isSubmittingConflictResolution ? 'Saving...' : 'Submit Official Resolution'}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => { setResolvingConflictId(null); setConflictReason(''); }}
+                                        style={{ padding: '6px 12px', backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => { setResolvingConflictId(conf.conflict_id); setConflictReason(''); }}
+                                    style={{
+                                      padding: '5px 12px',
+                                      backgroundColor: '#BE123C',
+                                      color: '#FFFFFF',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      fontSize: '11.5px',
+                                      fontWeight: 600,
+                                      cursor: 'pointer',
+                                      marginTop: '4px'
+                                    }}
+                                  >
+                                    Resolve Discrepancy
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Review History / Timeline */}
                     <div>

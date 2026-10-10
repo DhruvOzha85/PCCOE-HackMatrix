@@ -9,6 +9,7 @@ const chatRoutes = require("./routes/chatRoutes");
 const applicationRoutes = require("./routes/applicationRoutes");
 const reviewerRoutes = require("./routes/reviewerRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const translateRoutes = require("./routes/translateRoutes");
 const { notFoundHandler, globalErrorHandler } = require("./middleware/errorHandler");
 
 const { createCorsMiddleware } = require("./config/corsConfig");
@@ -35,6 +36,7 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/reviewer", reviewerRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/translate", translateRoutes);
 app.use(notFoundHandler);
 app.use(globalErrorHandler);
 

@@ -6,7 +6,7 @@ export function FinLogoClear({ className = '' }) {
     <div className={`fin-brand-lockup ${className}`}>
       {/* Top Brand Row: Designed FIN Wordmark + Stylized National Tricolor Ribbon */}
       <div className="fin-brand-top-row">
-        <span className="fin-brand-hero-title">FIN</span>
+        <span className="fin-brand-hero-title notranslate" translate="no" lang="en">FIN</span>
 
         <svg
           width="34"

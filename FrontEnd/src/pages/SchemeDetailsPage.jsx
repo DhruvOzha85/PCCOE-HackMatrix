@@ -36,12 +36,13 @@ import {
   AlertCircle
 } from 'lucide-react';
 import PageContainer from '../components/layout/PageContainer';
-import { fetchSchemeById, checkSchemeEligibility, fetchSchemeFaqs } from '../services/schemeService';
+import { fetchSchemeById, checkSchemeEligibility, fetchSchemeFaqs, recomputeSchemeEligibility } from '../services/schemeService';
 import { getStoredUser } from '../services/authService';
 import { fetchUserDocuments } from '../services/documentService';
 import SchemeLogo from '../components/schemes/SchemeLogo';
 import { submitApplication } from '../services/applicationService';
 import { navigateToSchemeDocuments } from '../utils/schemeNavigation';
+import EligibilityChangeAnalysisCard from '../components/schemes/EligibilityChangeAnalysisCard';
 
 // Assets
 import ashokStambhVector from '../assets/ashok_stambh_vector.svg';
@@ -952,6 +953,37 @@ export default function SchemeDetailsPage({ defaultTab, schemeIdProp }) {
                         </div>
                       </div>
                     )}
+
+                    {/* Addition 1 & Addition 2: Eligibility Change Analysis & Cross-Document Verification Component */}
+                    <EligibilityChangeAnalysisCard
+                      schemeId={schemeId}
+                      changeAnalysis={eligibilityResult?.changeAnalysis}
+                      eligibilityResult={eligibilityResult}
+                      onRecompute={async (profileOverride) => {
+                        setIsCheckingEligibility(true);
+                        setEligibilityError(null);
+                        try {
+                          const previousResult = eligibilityResult;
+                          const res = await recomputeSchemeEligibility(schemeId, profileOverride, previousResult);
+                          setEligibilityResult(res?.data || res);
+                        } catch (err) {
+                          // fallback to basic check if recompute endpoint fails
+                          try {
+                            const stored = getStoredUser() || {};
+                            const merged = { ...stored, ...profileOverride };
+                            const res = await checkSchemeEligibility(schemeId, merged);
+                            setEligibilityResult(res?.data || res);
+                          } catch (err2) {
+                            setEligibilityError(err2.message || 'Recomputation failed');
+                          }
+                        } finally {
+                          setIsCheckingEligibility(false);
+                        }
+                      }}
+                      onUploadDocument={(field) => {
+                        navigate('/documents');
+                      }}
+                    />
                   </div>
                 ) : (
                   <div style={{ padding: '24px', textAlign: 'center', background: '#F8F9FA', borderRadius: '10px' }}>

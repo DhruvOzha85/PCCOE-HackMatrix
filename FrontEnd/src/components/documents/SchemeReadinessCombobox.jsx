@@ -35,7 +35,11 @@ export default function SchemeReadinessCombobox({
   // Find currently selected scheme
   const selectedScheme = useMemo(() => {
     if (!selectedSchemeId || !schemes || schemes.length === 0) return null;
-    return schemes.find((s) => s.id === selectedSchemeId) || null;
+    return schemes.find(
+      (s) => (s.id && s.id === selectedSchemeId) ||
+             (s.scheme_id && s.scheme_id === selectedSchemeId) ||
+             (s.slug && s.slug === selectedSchemeId)
+    ) || null;
   }, [schemes, selectedSchemeId]);
 
   // Filter schemes based on search query
@@ -43,11 +47,12 @@ export default function SchemeReadinessCombobox({
     if (!searchQuery.trim()) return schemes;
     const q = searchQuery.toLowerCase().trim();
     return schemes.filter((s) => {
-      const name = (s.name || s.scheme_name || '').toLowerCase();
-      const id = (s.id || '').toLowerCase();
-      const benefit = (s.benefit || s.benefit_summary || '').toLowerCase();
+      const name = (s.name || s.scheme_name || s.title || '').toLowerCase();
+      const id = (s.id || s.scheme_id || s.slug || '').toLowerCase();
+      const benefit = (s.benefit || s.benefit_summary || s.max_benefit || '').toLowerCase();
       const ministry = (s.ministry || s.department || '').toLowerCase();
-      return name.includes(q) || id.includes(q) || benefit.includes(q) || ministry.includes(q);
+      const state = (s.state || '').toLowerCase();
+      return name.includes(q) || id.includes(q) || benefit.includes(q) || ministry.includes(q) || state.includes(q);
     });
   }, [schemes, searchQuery]);
 
@@ -133,9 +138,10 @@ export default function SchemeReadinessCombobox({
         e.preventDefault();
         if (highlightedIndex >= 0 && highlightedIndex < filteredSchemes.length) {
           const chosen = filteredSchemes[highlightedIndex];
-          handleSelect(chosen.id);
+          handleSelect(chosen.id || chosen.scheme_id || chosen.slug);
         } else if (filteredSchemes.length === 1) {
-          handleSelect(filteredSchemes[0].id);
+          const only = filteredSchemes[0];
+          handleSelect(only.id || only.scheme_id || only.slug);
         }
       }
     },
@@ -286,27 +292,36 @@ export default function SchemeReadinessCombobox({
               </li>
             ) : (
               filteredSchemes.map((scheme, idx) => {
-                const isSelected = scheme.id === selectedSchemeId;
+                const schemeId = scheme.id || scheme.scheme_id || scheme.slug;
+                const schemeName = scheme.name || scheme.scheme_name || scheme.title;
+                const schemeBenefit = scheme.benefit || scheme.max_benefit || scheme.benefit_summary;
+                const schemeDept = scheme.department || scheme.ministry;
+                const isSelected = schemeId === selectedSchemeId;
                 const isHighlighted = idx === highlightedIndex;
                 const isCentral = isCentralScheme(scheme);
                 const badgeLabel = scheme.state || (isCentral ? 'Central' : policyState || 'Gujarat');
 
                 return (
                   <li
-                    key={scheme.id}
-                    id={`scheme-opt-${scheme.id}`}
+                    key={schemeId || idx}
+                    id={`scheme-opt-${schemeId}`}
                     role="option"
                     aria-selected={isSelected}
                     className={`checker-combobox-option ${isSelected ? 'selected' : ''} ${isHighlighted ? 'highlighted' : ''}`}
-                    onClick={() => handleSelect(scheme.id)}
+                    onClick={() => handleSelect(schemeId)}
                     onMouseEnter={() => setHighlightedIndex(idx)}
-                    title={scheme.name}
+                    title={schemeName}
                   >
                     <div className="checker-combobox-option-body">
                       <div className="checker-combobox-option-header">
                         <span className={`checker-combobox-badge ${isCentral ? 'central' : 'state'}`}>
                           {badgeLabel}
                         </span>
+                        {schemeDept && (
+                          <span className="checker-combobox-dept-badge" title={schemeDept}>
+                            {schemeDept}
+                          </span>
+                        )}
                         {isSelected && (
                           <span className="checker-combobox-check-icon" aria-hidden="true">
                             <Check size={13} strokeWidth={2.5} />
@@ -314,11 +329,11 @@ export default function SchemeReadinessCombobox({
                         )}
                       </div>
                       <div className="checker-combobox-option-name">
-                        {scheme.name}
+                        {schemeName}
                       </div>
-                      {scheme.benefit && (
+                      {schemeBenefit && (
                         <div className="checker-combobox-option-benefit">
-                          {scheme.benefit}
+                          {schemeBenefit}
                         </div>
                       )}
                     </div>

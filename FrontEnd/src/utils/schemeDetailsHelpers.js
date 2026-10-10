@@ -472,53 +472,95 @@ export function matchDocumentStatus(docName, userDocs = [], currentUserId = null
     }
 
     // 5. Bank Passbook / Bank Details
-    const isBankTarget = cleanTarget.includes('passbook') || cleanTarget.includes('bankaccount') || cleanTarget.includes('bankstatement') || cleanTarget.includes('cancelledcheque');
+    const isBankTarget = cleanTarget.includes('passbook') || cleanTarget.includes('bankaccount') || cleanTarget.includes('bankdetails') || cleanTarget.includes('bankstatement') || cleanTarget.includes('cancelledcheque');
     if (isBankTarget) {
       if (cleanType.includes('bank') || cleanType.includes('passbook')) return true;
       if (cleanFileName.includes('passbook') || cleanFileName.includes('bank') || cleanFileName.includes('cheque')) return true;
       if (cleanTitle.includes('passbook') || cleanTitle.includes('bank')) return true;
     }
 
-    // 6. Land Records
-    const isLandTarget = cleanTarget.includes('land') || cleanTarget.includes('712') || cleanTarget.includes('ror') || cleanTarget.includes('khatauni');
+    // 6. Land Records (7/12, 8-A, ROR, Khatauni, Fencing)
+    const isLandTarget = cleanTarget.includes('land') || cleanTarget.includes('712') || cleanTarget.includes('8a') || cleanTarget.includes('ror') || cleanTarget.includes('khatauni') || cleanTarget.includes('fencing');
     if (isLandTarget) {
-      if (cleanType.includes('land') || cleanType.includes('712')) return true;
-      if (cleanFileName.includes('land') || cleanFileName.includes('712') || cleanFileName.includes('ror')) return true;
+      if (cleanType.includes('land') || cleanType.includes('712') || cleanType.includes('8a')) return true;
+      if (cleanFileName.includes('land') || cleanFileName.includes('712') || cleanFileName.includes('8a') || cleanFileName.includes('ror')) return true;
+      if (cleanTitle.includes('land') || cleanTitle.includes('8-a') || cleanTitle.includes('7/12')) return true;
     }
 
-    // 7. Photograph
+    // 7. Labour Card / BOCW Registration
+    const isLabourTarget = cleanTarget.includes('labour') || cleanTarget.includes('labor') || cleanTarget.includes('bocw') || cleanTarget.includes('hpbocwwb') || cleanTarget.includes('worker');
+    if (isLabourTarget) {
+      if (cleanType.includes('labour') || cleanType.includes('bocw') || cleanType.includes('worker')) return true;
+      if (cleanFileName.includes('labour') || cleanFileName.includes('bocw') || cleanFileName.includes('worker')) return true;
+      if (cleanTitle.includes('labour') || cleanTitle.includes('bocw') || cleanTitle.includes('worker')) return true;
+    }
+
+    // 8. Widow Certificate
+    const isWidowTarget = cleanTarget.includes('widow');
+    if (isWidowTarget) {
+      if (cleanType.includes('widow')) return true;
+      if (cleanFileName.includes('widow')) return true;
+      if (cleanTitle.includes('widow')) return true;
+    }
+
+    // 9. Age Proof / Birth Certificate
+    const isAgeTarget = cleanTarget.includes('age') || cleanTarget.includes('birth') || cleanTarget.includes('dob');
+    if (isAgeTarget) {
+      if (cleanType.includes('age') || cleanType.includes('birth') || cleanType.includes('dob')) return true;
+      if (cleanFileName.includes('age') || cleanFileName.includes('birth') || cleanFileName.includes('dob')) return true;
+      if (cleanTitle.includes('age') || cleanTitle.includes('birth') || cleanTitle.includes('dob')) return true;
+    }
+
+    // 10. Consent Letter / NOC
+    const isConsentTarget = cleanTarget.includes('consent') || cleanTarget.includes('noc') || cleanTarget.includes('undertaking');
+    if (isConsentTarget) {
+      if (cleanType.includes('consent') || cleanType.includes('noc')) return true;
+      if (cleanFileName.includes('consent') || cleanFileName.includes('noc')) return true;
+      if (cleanTitle.includes('consent') || cleanTitle.includes('noc')) return true;
+    }
+
+    // 11. Van Adhikar Patra / Forest Sanad
+    const isForestTarget = cleanTarget.includes('vanadhikar') || cleanTarget.includes('sanad') || cleanTarget.includes('forest');
+    if (isForestTarget) {
+      if (cleanType.includes('forest') || cleanType.includes('sanad')) return true;
+      if (cleanFileName.includes('forest') || cleanFileName.includes('sanad') || cleanFileName.includes('adhikar')) return true;
+      if (cleanTitle.includes('forest') || cleanTitle.includes('sanad')) return true;
+    }
+
+    // 12. Photograph
     const isPhotoTarget = cleanTarget.includes('photograph') || cleanTarget.includes('photo') || cleanTarget.includes('picture');
     if (isPhotoTarget) {
       if (cleanType.includes('photo') || cleanType.includes('pic')) return true;
       if (cleanFileName.includes('photo') || cleanFileName.includes('pic') || cleanFileName.includes('passport')) return true;
     }
 
-    // 8. Rent Agreement / Lease / Tenancy
+    // 13. Rent Agreement / Lease / Tenancy
     const isRentTarget = cleanTarget.includes('rent') || cleanTarget.includes('lease') || cleanTarget.includes('tenant') || cleanTarget.includes('tenancy') || cleanTarget.includes('landlord');
     if (isRentTarget) {
       if (cleanType.includes('rent') || cleanType.includes('lease') || cleanType.includes('tenan')) return true;
       if (cleanFileName.includes('rent') || cleanFileName.includes('lease') || cleanFileName.includes('agreement')) return true;
     }
 
-    // 9. Power of Attorney
+    // 14. Power of Attorney
     const isPoaTarget = cleanTarget.includes('powerofattorney') || cleanTarget.includes('attorney') || cleanTarget.includes('poa');
     if (isPoaTarget) {
       if (cleanType.includes('attorney') || cleanType === 'poa') return true;
       if (cleanFileName.includes('attorney') || cleanFileName.includes('poa')) return true;
     }
 
-    // 10. Tax Bill
+    // 15. Tax Bill
     const isTaxTarget = cleanTarget.includes('taxbill') || cleanTarget.includes('taxreceipt') || (cleanTarget.includes('tax') && cleanTarget.includes('bill'));
     if (isTaxTarget) {
       if (cleanType.includes('tax')) return true;
       if (cleanFileName.includes('tax')) return true;
     }
 
-    // 11. Death Certificate
+    // 16. Death Certificate
     const isDeathTarget = cleanTarget.includes('deathcertificate') || cleanTarget.includes('death');
     if (isDeathTarget) {
       if (cleanType.includes('death')) return true;
       if (cleanFileName.includes('death')) return true;
+      if (cleanTitle.includes('death')) return true;
     }
 
     // 12. Generic / direct name match

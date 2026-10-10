@@ -80,10 +80,24 @@ const deleteDocument = async (req, res, next) => {
     }
 };
 
+const verifyDocument = async (req, res, next) => {
+    try {
+        const result = await documentServices.verifyDocument(req.params.id, req.user.id, req.body.status || 'VERIFIED');
+        res.json({
+            success: true,
+            message: "Document status updated",
+            data: result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     uploadDocument,
     extractDocument,
     listDocuments,
     getDocument,
-    deleteDocument
+    deleteDocument,
+    verifyDocument
 };

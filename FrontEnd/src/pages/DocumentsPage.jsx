@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import PageContainer from '../components/layout/PageContainer';
 import SchemeReadinessCombobox from '../components/documents/SchemeReadinessCombobox';
+import ContextualHelp from '../components/help/ContextualHelp';
 import {
   buildDynamicSchemeChecklist,
   normalizeDocRequirementId,
@@ -399,6 +400,7 @@ export default function DocumentsPage() {
 
   // Dynamic Scheme Selection & Guidance state
   const [selectedTargetSchemeId, setSelectedTargetSchemeId] = useState('');
+  const [isChangingScheme, setIsChangingScheme] = useState(false);
   const [availableSchemesList, setAvailableSchemesList] = useState([]);
   const [isSchemesLoading, setIsSchemesLoading] = useState(false);
   const [schemesFetchError, setSchemesFetchError] = useState(null);
@@ -800,17 +802,31 @@ export default function DocumentsPage() {
   const handleOpenTicketModal = (preselectedSchemeId = null) => {
     setSchemeGuidanceResult(null);
     let target = preselectedSchemeId;
+    if (!target && currentScheme?.id) {
+      target = currentScheme.id;
+    }
     if (!target && selectedTargetSchemeId) {
       target = selectedTargetSchemeId;
     }
     if (!target && selectedSchemeId) {
       target = selectedSchemeId;
     }
-    // Verify target exists in availableSchemesList before setting
-    if (target && availableSchemesList.some(s => s.id === target || s.scheme_id === target)) {
+
+    if (target) {
       setSelectedTargetSchemeId(target);
+      setIsChangingScheme(false);
+      // Ensure target scheme is preserved in availableSchemesList if missing
+      if (currentScheme && (currentScheme.id === target || currentScheme.slug === target)) {
+        setAvailableSchemesList((prev) => {
+          if (prev.some((s) => (s.id && s.id === target) || (s.scheme_id && s.scheme_id === target) || (s.slug && s.slug === target))) {
+            return prev;
+          }
+          return [currentScheme, ...prev];
+        });
+      }
     } else {
       setSelectedTargetSchemeId('');
+      setIsChangingScheme(true);
     }
     setIsTicketModalOpen(true);
   };
@@ -871,7 +887,7 @@ export default function DocumentsPage() {
       }
 
       // 1. Validate selected scheme strictly against loaded canonical catalog
-      const validation = validateSchemeSelection(selectedTargetSchemeId, availableSchemesList);
+      const validation = validateSchemeSelection(selectedTargetSchemeId, modalComboboxSchemes);
       if (!validation.valid) {
         triggerToast(validation.message);
         setIsSubmittingPolicy(false);
@@ -1160,6 +1176,36 @@ export default function DocumentsPage() {
     }
     return dynamicSchemes;
   }, [dynamicSchemes, currentScheme]);
+
+  // Combined schemes list for the Application Modal Combobox (ensures currentScheme / deep-linked scheme is available)
+  const modalComboboxSchemes = useMemo(() => {
+    const list = [...availableSchemesList];
+    if (currentScheme) {
+      const exists = list.some(
+        (s) => (s.id && s.id === currentScheme.id) ||
+               (s.scheme_id && s.scheme_id === currentScheme.id) ||
+               (s.slug && s.slug === currentScheme.slug)
+      );
+      if (!exists) {
+        list.unshift(currentScheme);
+      }
+    }
+    return list;
+  }, [availableSchemesList, currentScheme]);
+
+  // Resolve active modal scheme object for prominent locked card display
+  const activeModalScheme = useMemo(() => {
+    if (!selectedTargetSchemeId) return currentScheme || null;
+    return (
+      modalComboboxSchemes.find(
+        (s) => (s.id && s.id === selectedTargetSchemeId) ||
+               (s.scheme_id && s.scheme_id === selectedTargetSchemeId) ||
+               (s.slug && s.slug === selectedTargetSchemeId)
+      ) ||
+      (currentScheme && (currentScheme.id === selectedTargetSchemeId || currentScheme.slug === selectedTargetSchemeId) ? currentScheme : null) ||
+      null
+    );
+  }, [selectedTargetSchemeId, modalComboboxSchemes, currentScheme]);
 
   // Auto-scroll / focus when navigating with schemeId
   useEffect(() => {
@@ -1773,7 +1819,15 @@ export default function DocumentsPage() {
             <div className="docs-scheme-checker-card" ref={checkerCardRef} id="scheme-readiness-checker">
               <div className="checker-header">
                 <div>
-                  <h4 className="checker-title">Scheme Readiness Checker</h4>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <h4 className="checker-title">Scheme Readiness Checker</h4>
+                    <ContextualHelp
+                      title="Scheme Readiness"
+                      content="Evaluates whether all mandatory and conditional statutory documents for this scheme are verified in your vault."
+                      linkText="Learn more"
+                      linkHref="/help?topic=scheme-readiness"
+                    />
+                  </div>
                   <span className="checker-subtitle">
                     Evaluating vault against {policyState || applicantState || 'Gujarat'} & Central schemes
                   </span>
@@ -1867,7 +1921,14 @@ export default function DocumentsPage() {
                       <div className="checker-item-list">
                         {readinessEvaluation.requirements.map((req) => (
                           <div key={req.id} className="checker-doc-item">
-                            <span className="checker-doc-name">{req.label}</span>
+                            <div style={{ flex: 1, paddingRight: '8px' }}>
+                              <span className="checker-doc-name">{req.label}</span>
+                              {req.isOptional && (
+                                <span style={{ display: 'inline-block', marginLeft: '6px', fontSize: '10px', color: '#B54708', backgroundColor: '#FEF0C7', padding: '1px 5px', borderRadius: '4px', fontWeight: 600 }}>
+                                  Conditional
+                                </span>
+                              )}
+                            </div>
                             {req.status === 'Verified' && (
                               <span className="checker-status-ok">
                                 <Check size={12} strokeWidth={3} />
@@ -1886,14 +1947,14 @@ export default function DocumentsPage() {
                                 <span>Review Required</span>
                               </span>
                             )}
-                            {req.status === 'Missing' && (
+                            {(req.status === 'Missing' || req.displayStatus === 'Optional') && (
                               <button
                                 type="button"
                                 className="checker-status-missing"
                                 style={{ background: 'none', border: 'none', padding: 0 }}
                                 onClick={() => handleOpenUploadModal(req.id)}
                               >
-                                Upload
+                                {req.isOptional ? 'Upload (Optional)' : 'Upload'}
                               </button>
                             )}
                           </div>
@@ -1904,7 +1965,21 @@ export default function DocumentsPage() {
                         <div className="checker-summary-text">
                           {readinessEvaluation.summaryMessage}
                         </div>
-                        <p className="checker-disclaimer">
+                        {readinessEvaluation.canApply && (
+                          <div style={{ marginTop: '10px' }}>
+                            <button
+                              type="button"
+                              className="btn-apply-ticket"
+                              style={{ width: '100%', justifyContent: 'center', padding: '8px 14px', fontSize: '12.5px' }}
+                              onClick={() => handleOpenTicketModal(currentScheme.id)}
+                            >
+                              <FileText size={14} />
+                              <span>Apply for {currentScheme.name}</span>
+                              <ArrowRight size={13} />
+                            </button>
+                          </div>
+                        )}
+                        <p className="checker-disclaimer" style={{ marginTop: '8px' }}>
                           {readinessEvaluation.disclaimer}
                         </p>
                       </div>
@@ -2055,39 +2130,81 @@ export default function DocumentsPage() {
                     <div className="policy-section-header">
                       <h4 className="policy-section-title">Target Government Scheme</h4>
                     </div>
-                    <div className="policy-fields-grid">
-                      <div className="policy-field-group policy-field-full">
-                        <label className="policy-field-label" htmlFor="policy-target-scheme">
-                          Select Scheme from Official Catalog *
-                        </label>
-                        <select
-                          id="policy-target-scheme"
-                          className="docs-form-select policy-input"
-                          value={selectedTargetSchemeId}
-                          onChange={(e) => setSelectedTargetSchemeId(e.target.value)}
-                          required
-                          disabled={availableSchemesList.length === 0}
-                        >
-                          <option value="">
-                            {isSchemesLoading
-                              ? '-- Loading Official Schemes from Catalog... --'
-                              : availableSchemesList.length === 0
-                              ? '-- Official Scheme Catalog Unavailable --'
-                              : '-- Select a Scheme from Catalog --'}
-                          </option>
-                          {availableSchemesList.map((s) => (
-                            <option key={s.id || s.scheme_id} value={s.id || s.scheme_id}>
-                              {s.name || s.scheme_name || s.title} {s.department ? `(${s.department})` : ''}
-                            </option>
-                          ))}
-                        </select>
-                        {availableSchemesList.length === 0 && !isSchemesLoading && (
-                          <span style={{ fontSize: '11.5px', color: '#B42318', marginTop: '4px', display: 'block' }}>
-                            Catalog unavailable. Applications cannot be submitted without an authentic scheme from the catalog.
-                          </span>
+
+                    {activeModalScheme && !isChangingScheme ? (
+                      <div className="policy-target-scheme-card">
+                        <div className="policy-target-scheme-card-header">
+                          <div className="policy-target-scheme-badges">
+                            <span className={`checker-combobox-badge ${isCentralScheme(activeModalScheme) ? 'central' : 'state'}`}>
+                              {activeModalScheme.state || (isCentralScheme(activeModalScheme) ? 'Central Scheme' : (policyState || applicantState || 'Gujarat'))}
+                            </span>
+                            {(activeModalScheme.department || activeModalScheme.ministry) && (
+                              <span className="policy-target-dept-badge" title={activeModalScheme.department || activeModalScheme.ministry}>
+                                {activeModalScheme.department || activeModalScheme.ministry}
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            className="policy-change-scheme-btn"
+                            onClick={() => setIsChangingScheme(true)}
+                            title="Choose another scheme from catalog"
+                          >
+                            <RefreshCw size={11} />
+                            <span>Change Scheme</span>
+                          </button>
+                        </div>
+
+                        <h4 className="policy-target-scheme-name">
+                          {activeModalScheme.name || activeModalScheme.scheme_name || activeModalScheme.title}
+                        </h4>
+
+                        {activeModalScheme.benefit && (
+                          <div className="policy-target-scheme-benefit">
+                            <Sparkles size={13} color="#005B50" />
+                            <span>{activeModalScheme.benefit}</span>
+                          </div>
                         )}
+
+                        <div className="policy-target-vault-status">
+                          <CheckCircle2 size={13} color="#027A48" />
+                          <span>All verified documents from your vault will be attached to this application</span>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="policy-fields-grid">
+                        <div className="policy-field-group policy-field-full">
+                          <label className="policy-field-label" htmlFor="policy-target-scheme">
+                            Select Scheme from Official Catalog *
+                          </label>
+                          <SchemeReadinessCombobox
+                            schemes={modalComboboxSchemes}
+                            selectedSchemeId={selectedTargetSchemeId}
+                            onSelectScheme={(id) => {
+                              setSelectedTargetSchemeId(id);
+                              if (id) setIsChangingScheme(false);
+                            }}
+                            isLoading={isSchemesLoading}
+                            error={schemesFetchError}
+                            policyState={policyState || applicantState || 'Gujarat'}
+                          />
+                          {activeModalScheme && (
+                            <button
+                              type="button"
+                              className="policy-cancel-change-btn"
+                              onClick={() => setIsChangingScheme(false)}
+                            >
+                              Cancel &amp; keep &quot;{activeModalScheme.name || activeModalScheme.scheme_name || activeModalScheme.title}&quot;
+                            </button>
+                          )}
+                          {modalComboboxSchemes.length === 0 && !isSchemesLoading && (
+                            <span style={{ fontSize: '11.5px', color: '#B42318', marginTop: '4px', display: 'block' }}>
+                              Catalog unavailable. Applications cannot be submitted without an authentic scheme from the catalog.
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Section 1: Applicant Information */}

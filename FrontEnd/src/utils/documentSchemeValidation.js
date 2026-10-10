@@ -8,7 +8,7 @@
  * - Resolves verified scheme metadata and authentic benefit amounts
  */
 
-import { buildDynamicSchemeChecklist, normalizeDocRequirementId } from '../data/documentsData.js';
+import { buildDynamicSchemeChecklist, normalizeDocRequirementId, isOptionalRequirement } from '../data/documentsData.js';
 import { matchDocumentStatus } from './schemeDetailsHelpers.js';
 
 /**
@@ -73,7 +73,7 @@ export function validateSchemeSelection(selectedSchemeId, availableSchemesList) 
 
   // 3. Reject known fabricated/stale legacy identifiers if they do not exist in the active catalog
   const matchingScheme = availableSchemesList.find(
-    (s) => (s.id && s.id === cleanId) || (s.scheme_id && s.scheme_id === cleanId)
+    (s) => (s.id && s.id === cleanId) || (s.scheme_id && s.scheme_id === cleanId) || (s.slug && s.slug === cleanId)
   );
 
   if (!matchingScheme) {
@@ -436,19 +436,35 @@ export function evaluateSchemeReadiness(scheme, userDocuments = [], currentUserI
     const rawId = typeof reqItem === 'object' ? reqItem.id : reqItem;
     const reqLabel = typeof reqItem === 'object' ? reqItem.label : rawId;
     const evalResult = evaluateRequirementStatus(reqItem, userDocuments, currentUserId);
+    const isOptional = isOptionalRequirement(reqLabel) || isOptionalRequirement(rawId);
+
+    let displayStatus = evalResult.status;
+    if (isOptional && evalResult.status === 'Missing') {
+      displayStatus = 'Optional';
+    }
+
     return {
       id: rawId,
       label: reqLabel,
-      ...evalResult
+      isOptional,
+      displayStatus,
+      ...evalResult,
+      isMissing: isOptional ? false : evalResult.isMissing
     };
   });
+
+  const mandatoryReqs = evaluatedRequirements.filter(r => !r.isOptional);
+  const optionalReqs = evaluatedRequirements.filter(r => r.isOptional);
 
   const verifiedCount = evaluatedRequirements.filter(r => r.status === 'Verified').length;
   const pendingCount = evaluatedRequirements.filter(r => r.status === 'Pending Verification').length;
   const reviewCount = evaluatedRequirements.filter(r => r.status === 'Review Required').length;
-  const missingCount = evaluatedRequirements.filter(r => r.status === 'Missing').length;
+  const missingCount = mandatoryReqs.filter(r => r.status === 'Missing').length;
   const totalCount = evaluatedRequirements.length;
-  const allVerified = verifiedCount === totalCount && totalCount > 0;
+  const mandatoryCount = mandatoryReqs.length;
+
+  const mandatoryVerified = mandatoryReqs.filter(r => r.status === 'Verified' || r.status === 'Pending Verification').length;
+  const allVerified = mandatoryCount > 0 ? (mandatoryVerified === mandatoryCount) : (verifiedCount > 0);
 
   return {
     status: allVerified ? 'READY' : 'INCOMPLETE',
@@ -463,10 +479,12 @@ export function evaluateSchemeReadiness(scheme, userDocuments = [], currentUserI
     reviewCount,
     missingCount,
     totalCount,
+    mandatoryCount,
+    optionalCount: optionalReqs.length,
     requirements: evaluatedRequirements,
     summaryMessage: allVerified
-      ? 'All required documents verified in vault.'
-      : `${verifiedCount} of ${totalCount} documents verified.${pendingCount > 0 ? ` ${pendingCount} pending verification.` : ''}${missingCount > 0 ? ` ${missingCount} missing.` : ''}`,
+      ? `All ${mandatoryCount} mandatory documents verified/uploaded in vault.${optionalReqs.length > 0 ? ` (${optionalReqs.length} conditional items)` : ''}`
+      : `${verifiedCount} of ${totalCount} documents verified.${pendingCount > 0 ? ` ${pendingCount} pending verification.` : ''}${missingCount > 0 ? ` ${missingCount} mandatory missing.` : ''}`,
     disclaimer: '* Document readiness indicates vault document availability only and does not guarantee government eligibility, sanction, qualification, or official scheme approval.'
   };
 }

@@ -60,9 +60,21 @@ const submitDecision = async (req, res, next) => {
     }
 };
 
+const verifyDocument = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body || {};
+        const updated = await reviewerService.updateDocumentVerificationStatus(id, status || 'VERIFIED');
+        return res.status(200).json({ success: true, data: updated });
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
     getDashboardStats,
     getApplicationsQueue,
     getApplicationDetails,
-    submitDecision
+    submitDecision,
+    verifyDocument
 };
