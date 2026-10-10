@@ -16,6 +16,7 @@ import {
   FileText,
 } from 'lucide-react';
 import '../styles/signup.css';
+import LanguageSelector from '../components/common/LanguageSelector';
 import {
   registerUser,
   loginUser,
@@ -194,6 +195,8 @@ export default function SignupPage({ initialMode = 'signup' }) {
         console.warn('Backend server offline, continuing with local development session:', authResult.message);
       }
 
+      // Resolve proper registered citizen name (so login preserves the registration username)
+      const targetEmail = formData.email.trim();
       const returnedUser = authResult.data?.user || {};
       const userRole = returnedUser.role || (targetEmail === 'reviewer@fin.gov.in' ? 'reviewer' : 'user');
 
@@ -204,8 +207,6 @@ export default function SignupPage({ initialMode = 'signup' }) {
         return;
       }
 
-      // Resolve proper registered citizen name (so login preserves the registration username)
-      const targetEmail = formData.email.trim();
       const registeredProfile = getRegisteredUserByEmail(targetEmail);
 
       let citizenFullName = '';
@@ -220,6 +221,10 @@ export default function SignupPage({ initialMode = 'signup' }) {
           fullName: citizenFullName,
           phone: `${selectedCountry.code} ${rawDigits}`.trim(),
         });
+        sessionStorage.setItem('fin_just_registered', 'true');
+        try {
+          localStorage.removeItem(`fin_onboarding_completed_${targetEmail}`);
+        } catch (_) {}
       } else {
         citizenFullName =
           registeredProfile?.fullName ||
@@ -249,10 +254,13 @@ export default function SignupPage({ initialMode = 'signup' }) {
         fallbackName: citizenFullName || (isSignIn ? (registeredProfile?.fullName || '') : formData.fullName.trim()),
       });
 
-      setSuccessMsg(isSignIn ? 'Welcome back! Redirecting...' : 'Account created successfully! Redirecting...');
+      setSuccessMsg(isSignIn ? 'Welcome back! Redirecting...' : 'Account created successfully! Preparing your onboarding...');
       setTimeout(() => {
         if (userRole === 'reviewer') {
           navigate('/reviewer/dashboard', { replace: true });
+        } else if (!isSignIn) {
+          // Direct newly registered user straight to onboarding in the first place
+          navigate('/onboarding', { replace: true, state: { showOnboarding: true } });
         } else {
           navigate(postAuthPath, { replace: true });
         }
@@ -277,7 +285,16 @@ export default function SignupPage({ initialMode = 'signup' }) {
       fallbackName: name,
       developmentBypass: true,
     });
-    navigate(postAuthPath, { replace: true });
+    if (!isSignIn) {
+      sessionStorage.setItem('fin_just_registered', 'true');
+      try {
+        localStorage.removeItem(`fin_onboarding_completed_dev-${email}`);
+        localStorage.removeItem(`fin_onboarding_completed_${email}`);
+      } catch (_) {}
+      navigate('/onboarding', { replace: true, state: { showOnboarding: true } });
+    } else {
+      navigate(postAuthPath, { replace: true });
+    }
   };
 
   const handleForgotSubmit = (e) => {
@@ -403,7 +420,7 @@ export default function SignupPage({ initialMode = 'signup' }) {
       <header className="signup-navbar">
         <Link to="/dashboard" className="signup-nav-logo" title="FIN — Home">
           <div className="signup-logo-row">
-            <span className="signup-logo-text">FIN</span>
+            <span className="signup-logo-text notranslate" translate="no" lang="en">FIN</span>
             <img
               src={tricolorRibbon}
               alt="Tricolor Flag"
@@ -414,6 +431,7 @@ export default function SignupPage({ initialMode = 'signup' }) {
         </Link>
 
         <div className="signup-nav-right">
+          <LanguageSelector />
           <span>
             {isSignIn ? "Don't have an account?" : 'Already have an account?'}
           </span>

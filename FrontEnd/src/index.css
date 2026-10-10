@@ -9,6 +9,8 @@
 @import './styles/applications.css';
 @import './styles/chatbot.css';
 @import './styles/footer.css';
+@import './styles/help.css';
+@import './styles/languageSelector.css';
 
 /* ==========================================================================
    RESET & BASELINE STYLES

@@ -32,6 +32,7 @@ from .routes.query import router as query_router
 from .routes.explanation import router as explanation_router
 from .routes.intelligence import router as intelligence_router
 from .routes.review import router as review_router
+from .routes.evidence import router as evidence_router
 
 logger = logging.getLogger("fin.api.app")
 
@@ -127,6 +128,7 @@ def create_app(config: ServiceConfig = DEFAULT_SERVICE_CONFIG) -> FastAPI:
     app.include_router(explanation_router)
     app.include_router(intelligence_router)
     app.include_router(review_router)
+    app.include_router(evidence_router)
 
     return app
 

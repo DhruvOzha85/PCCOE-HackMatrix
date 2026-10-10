@@ -10,6 +10,8 @@ import SuggestedSchemesPage from '../pages/SuggestedSchemesPage';
 import ProfilePage from '../pages/ProfilePage';
 import ReviewerDashboardPage from '../pages/ReviewerDashboardPage';
 import ReviewApplicationsPage from '../pages/ReviewApplicationsPage';
+import HelpCenterPage from '../pages/HelpCenterPage';
+import OnboardingPage from '../pages/OnboardingPage';
 import NotFoundPage from '../pages/NotFoundPage';
 
 import SignupPage from '../pages/SignupPage';
@@ -88,12 +90,14 @@ export default function AppRoutes() {
         />
 
         {/* Shared Authenticated Pages (Citizens & Reviewers) */}
+        <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/discover" element={<DiscoverPage />} />
         <Route path="/schemes/:schemeId" element={<SchemeDetailsPage />} />
         <Route path="/scheme/:schemeId" element={<SchemeDetailsPage />} />
         <Route path="/schemes/:schemeId/benefits" element={<SchemeBenefitsPage />} />
         <Route path="/scheme/:schemeId/benefits" element={<SchemeBenefitsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/help" element={<HelpCenterPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

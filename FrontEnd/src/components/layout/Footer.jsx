@@ -391,7 +391,7 @@ export default function Footer({ isAtEnd = false }) {
               <Link to="/dashboard" className="footer-brand-link" title="FIN — Financial Policy Intelligence (Return to Dashboard)">
                 <div className="footer-brand-lockup">
                   <div className="footer-brand-title-row">
-                    <span className="footer-brand-title">FIN</span>
+                    <span className="footer-brand-title notranslate" translate="no" lang="en">FIN</span>
                     <svg
                       width="34"
                       height="23"

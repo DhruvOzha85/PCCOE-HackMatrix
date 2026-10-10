@@ -202,17 +202,29 @@ const getReviewQueue = async ({ status = 'all', page = 1, limit = 50 } = {}) => 
  */
 const getApplicationReviewDetails = async (applicationId) => {
     const cleanId = String(applicationId || '').trim();
-    if (!cleanId || !UUID_REGEX.test(cleanId)) {
-        throw httpError(404, 'Invalid application ID format');
+    if (!cleanId) {
+        throw httpError(400, 'Application ID is required');
     }
 
-    const { data: appRow, error: appError } = await supabaseAdmin
-        .from('applications')
-        .select('*')
-        .eq('id', cleanId)
-        .maybeSingle();
+    let appRow = null;
+    if (UUID_REGEX.test(cleanId)) {
+        const { data } = await supabaseAdmin
+            .from('applications')
+            .select('*')
+            .eq('id', cleanId)
+            .maybeSingle();
+        appRow = data;
+    }
 
-    if (appError) throw httpError(500, appError.message);
+    if (!appRow) {
+        const { data } = await supabaseAdmin
+            .from('applications')
+            .select('*')
+            .eq('application_number', cleanId)
+            .maybeSingle();
+        appRow = data;
+    }
+
     if (!appRow) throw httpError(404, 'Application not found');
 
     const hydratedApp = await hydrateApplicationRecord(appRow);
@@ -249,11 +261,43 @@ const getApplicationReviewDetails = async (applicationId) => {
         } catch (_) {}
     }
 
+    // Fetch all application IDs for this applicant so documents uploaded across default/scheme applications are found
+    let relatedAppIds = [cleanId];
+    if (appRow.applicant_id) {
+        try {
+            const { data: userApps } = await supabaseAdmin
+                .from('applications')
+                .select('id')
+                .eq('applicant_id', appRow.applicant_id);
+            if (userApps && userApps.length > 0) {
+                relatedAppIds = Array.from(new Set([cleanId, ...userApps.map(a => a.id)]));
+            }
+        } catch (_) {}
+    }
+
     // Fetch documents with secure signed URLs and OCR extracted facts
     const { data: docRows } = await supabaseAdmin
         .from('documents')
         .select('*')
-        .eq('application_id', cleanId);
+        .in('application_id', relatedAppIds);
+
+    const isAppApproved = String(appRow.status || '').toLowerCase() === 'approved' || String(appRow.status || '').toLowerCase() === 'sanctioned';
+    if (isAppApproved && docRows && docRows.length > 0) {
+        const unverifiedIds = docRows.filter(d => (d.verification_status || '').toUpperCase() !== 'VERIFIED').map(d => d.id);
+        if (unverifiedIds.length > 0) {
+            try {
+                await supabaseAdmin
+                    .from('documents')
+                    .update({ verification_status: 'VERIFIED', updated_at: new Date().toISOString() })
+                    .in('id', unverifiedIds);
+                docRows.forEach(d => {
+                    if (unverifiedIds.includes(d.id)) {
+                        d.verification_status = 'VERIFIED';
+                    }
+                });
+            } catch (_) {}
+        }
+    }
 
     const DOCUMENTS_BUCKET = process.env.SUPABASE_DOCUMENTS_BUCKET || 'documents';
     const documents = await Promise.all((docRows || []).map(async (doc) => {
@@ -312,6 +356,13 @@ const getApplicationReviewDetails = async (applicationId) => {
     }
     appReviews.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
+    // Addition 2: Include detected cross-document evidence conflicts
+    let evidenceConflicts = [];
+    try {
+        const evidenceVerificationService = require('./evidenceVerificationService');
+        evidenceConflicts = await evidenceVerificationService.listReviewerConflicts();
+    } catch (_) { }
+
     return {
         application: hydratedApp,
         applicant: {
@@ -324,6 +375,7 @@ const getApplicationReviewDetails = async (applicationId) => {
         },
         scheme: schemeDetails,
         documents,
+        evidenceConflicts,
         reviewHistory: appReviews
     };
 };
@@ -350,8 +402,8 @@ const submitReviewDecision = async ({
 }) => {
     if (!reviewerId) throw httpError(401, 'Reviewer identity is required');
     const cleanAppId = String(applicationId || '').trim();
-    if (!cleanAppId || !UUID_REGEX.test(cleanAppId)) {
-        throw httpError(404, 'Invalid application ID');
+    if (!cleanAppId) {
+        throw httpError(400, 'Application ID is required');
     }
 
     const cleanDecision = String(decision || '').trim().toLowerCase();
@@ -367,15 +419,19 @@ const submitReviewDecision = async ({
         throw httpError(400, `A detailed reviewer remark is mandatory when choosing '${cleanDecision === 'reject' ? 'Reject' : 'Request Changes'}'.`);
     }
 
-    // Fetch existing application
-    const { data: appRow, error: fetchError } = await supabaseAdmin
-        .from('applications')
-        .select('*')
-        .eq('id', cleanAppId)
-        .maybeSingle();
+    // Fetch existing application by id or application_number
+    let appRow = null;
+    if (UUID_REGEX.test(cleanAppId)) {
+        const { data } = await supabaseAdmin.from('applications').select('*').eq('id', cleanAppId).maybeSingle();
+        appRow = data;
+    }
+    if (!appRow) {
+        const { data } = await supabaseAdmin.from('applications').select('*').eq('application_number', cleanAppId).maybeSingle();
+        appRow = data;
+    }
 
-    if (fetchError) throw httpError(500, fetchError.message);
     if (!appRow) throw httpError(404, 'Application not found');
+    const targetAppId = appRow.id;
 
     // Self-review prevention: Reviewers cannot review their own application
     if (appRow.applicant_id === reviewerId) {
@@ -421,12 +477,46 @@ const submitReviewDecision = async ({
             decision_notes: decisionNote,
             updated_at: now
         })
-        .eq('id', cleanAppId)
+        .eq('id', targetAppId)
         .select()
         .single();
 
     if (updateError) {
         throw httpError(500, `Failed to update application status: ${updateError.message}`);
+    }
+
+    // Automatically synchronize verification_status of associated documents
+    let syncAppIds = [targetAppId];
+    if (appRow.applicant_id) {
+        try {
+            const { data: userApps } = await supabaseAdmin
+                .from('applications')
+                .select('id')
+                .eq('applicant_id', appRow.applicant_id);
+            if (userApps && userApps.length > 0) {
+                syncAppIds = Array.from(new Set([targetAppId, ...userApps.map(a => a.id)]));
+            }
+        } catch (_) {}
+    }
+
+    if (cleanDecision === 'approve') {
+        try {
+            await supabaseAdmin
+                .from('documents')
+                .update({ verification_status: 'VERIFIED', updated_at: now })
+                .in('application_id', syncAppIds);
+        } catch (docSyncErr) {
+            console.warn('[reviewerService] Failed to sync document verification statuses on approval:', docSyncErr.message);
+        }
+    } else if (cleanDecision === 'reject') {
+        try {
+            await supabaseAdmin
+                .from('documents')
+                .update({ verification_status: 'REJECTED', updated_at: now })
+                .in('application_id', syncAppIds);
+        } catch (docSyncErr) {
+            console.warn('[reviewerService] Failed to sync document verification statuses on rejection:', docSyncErr.message);
+        }
     }
 
     // Persist to review history
@@ -498,9 +588,23 @@ const submitReviewDecision = async ({
     };
 };
 
+const updateDocumentVerificationStatus = async (documentId, status = 'VERIFIED') => {
+    const cleanStatus = (status || 'VERIFIED').toUpperCase();
+    const now = new Date().toISOString();
+    const { data, error } = await supabaseAdmin
+        .from('documents')
+        .update({ verification_status: cleanStatus, updated_at: now })
+        .eq('id', documentId)
+        .select()
+        .single();
+    if (error) throw httpError(500, `Failed to update document verification status: ${error.message}`);
+    return data;
+};
+
 module.exports = {
     getReviewerDashboardStats,
     getReviewQueue,
     getApplicationReviewDetails,
-    submitReviewDecision
+    submitReviewDecision,
+    updateDocumentVerificationStatus
 };

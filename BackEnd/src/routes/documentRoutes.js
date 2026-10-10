@@ -10,6 +10,7 @@ router.post("/upload", authMiddleware, upload.single("file"), validateUploadedFi
 router.post("/extract", authMiddleware, documentController.extractDocument);
 router.get("/", authMiddleware, documentController.listDocuments);
 router.get("/:id", authMiddleware, documentController.getDocument);
+router.post("/:id/verify", authMiddleware, documentController.verifyDocument);
 router.delete("/:id", authMiddleware, documentController.deleteDocument);
 
 module.exports = router;

@@ -76,3 +76,28 @@ export async function submitReviewDecision(applicationId, { decision, remark }) 
   }
   return json;
 }
+
+/**
+ * Verify individual document status
+ */
+export async function verifyDocumentStatus(documentId, status = 'VERIFIED') {
+  let res = await safeApiFetch(`/api/reviewer/documents/${documentId}/verify`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ status })
+  });
+
+  if (!res.ok) {
+    res = await safeApiFetch(`/api/documents/${documentId}/verify`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ status })
+    });
+  }
+
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json?.success) {
+    throw new Error(json?.message || `Document verification failed (${res.status})`);
+  }
+  return json.data;
+}

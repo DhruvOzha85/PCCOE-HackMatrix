@@ -24,6 +24,8 @@ import {
   markNotificationAsRead,
   markAllNotificationsAsRead
 } from '../../services/notificationService';
+import HelpButton from '../help/HelpButton';
+import LanguageSelector from '../common/LanguageSelector';
 
 function calculateProfileStrength(data) {
   if (!data) return 0;
@@ -43,7 +45,14 @@ function calculateProfileStrength(data) {
   return Math.round((filledCount / fields.length) * 100);
 }
 
-export default function Header({ onToggleSidebar, onToggleChat, onOpenChat, isChatOpen }) {
+export default function Header({
+  onToggleSidebar,
+  onToggleChat,
+  onOpenChat,
+  isChatOpen,
+  onToggleHelp,
+  isHelpOpen
+}) {
   const navigate = useNavigate();
   const handleChatClick = (e) => {
     if (typeof onToggleChat === 'function') {
@@ -464,9 +473,18 @@ export default function Header({ onToggleSidebar, onToggleChat, onOpenChat, isCh
           <span className="navbar-ai-sparkle-icon" aria-hidden="true">
             <Sparkles size={15} />
           </span>
-          <span className="navbar-ai-btn-text">Ask FIN AI</span>
+          <span className="navbar-ai-btn-text">Ask <span className="notranslate" translate="no" lang="en">FIN</span> AI</span>
           <span className="navbar-ai-badge" aria-hidden="true">AI</span>
         </button>
+
+        {/* Google Translation API Multilingual Selector */}
+        <LanguageSelector />
+
+        {/* Permanent Question-Mark Help Button */}
+        <HelpButton
+          onClick={onToggleHelp}
+          isOpen={isHelpOpen}
+        />
 
         {/* Notifications Popover Wrapper */}
         <div className="header-notification-wrapper" ref={notificationWrapperRef}>

@@ -8,7 +8,8 @@ import {
   Sparkles,
   X,
   LayoutDashboard,
-  ClipboardCheck
+  ClipboardCheck,
+  HelpCircle
 } from 'lucide-react';
 import { FinLogoClear } from '../common/BrandAssets';
 import tricolorRibbonOriginal from '../../assets/tricolor_ribbon_original.png';
@@ -21,12 +22,14 @@ const citizenNavItems = [
   { name: 'Suggested Schemes', path: '/suggested-schemes', icon: Sparkles },
   { name: 'My Documents', path: '/documents', icon: FileText },
   { name: 'Applications', path: '/applications', icon: Inbox },
+  { name: 'Help & Support', path: '/help', icon: HelpCircle },
 ];
 
 const reviewerNavItems = [
   { name: 'Reviewer Dashboard', path: '/reviewer/dashboard', icon: LayoutDashboard },
   { name: 'Discover Schemes', path: '/discover', icon: Search },
   { name: 'Review Applications', path: '/reviewer/applications', icon: ClipboardCheck },
+  { name: 'Help & Support', path: '/help', icon: HelpCircle },
 ];
 
 export default function Sidebar({ isOpen, onClose }) {

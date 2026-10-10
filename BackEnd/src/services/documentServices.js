@@ -434,11 +434,26 @@ const deleteDocument = async (id, userId) => {
     return { id };
 };
 
+const verifyDocument = async (documentId, userId, status = 'VERIFIED') => {
+    if (!userId) throw httpError(400, 'User ID is required');
+    const cleanStatus = (status || 'VERIFIED').toUpperCase();
+    const now = new Date().toISOString();
+    const { data, error } = await supabaseAdmin
+        .from('documents')
+        .update({ verification_status: cleanStatus, updated_at: now })
+        .eq('id', documentId)
+        .select()
+        .single();
+    if (error) throw httpError(500, `Failed to update document verification status: ${error.message}`);
+    return data;
+};
+
 module.exports = {
     uploadDocument,
     extractDocument,
     listDocuments,
     getDocumentById,
     deleteDocument,
+    verifyDocument,
     normalizeDocumentType
 };

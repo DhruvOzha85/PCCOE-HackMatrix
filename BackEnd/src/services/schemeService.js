@@ -130,7 +130,7 @@ const getCanonicalSchemeMetadata = (identifier) => {
                             snapshotDir = candidate;
                         }
                     }
-                } catch (_) {}
+                } catch (_) { }
             }
 
             if (!snapshotDir && fs.existsSync(snapshotsRoot)) {
@@ -214,7 +214,7 @@ const getCanonicalSchemeMetadata = (identifier) => {
                                 const cleanName = String(sname).toLowerCase().replace(/[^a-z0-9]/g, '');
                                 if (cleanName) canonicalSchemesIndex.set(cleanName, meta);
                             }
-                        } catch (_) {}
+                        } catch (_) { }
                     }
                 }
             }
@@ -305,11 +305,11 @@ const getCanonicalSchemeMetadata = (identifier) => {
     const normName = cleanId.replace(/[^a-z0-9]/g, '');
     const hashedClean = ensureUuid(cleanId);
     return canonicalSchemesIndex.get(cleanId) ||
-           canonicalSchemesIndex.get(cleanId.replace(/-/g, '_')) ||
-           canonicalSchemesIndex.get(cleanId.replace(/_/g, '-')) ||
-           (hashedClean ? canonicalSchemesIndex.get(hashedClean) : null) ||
-           (normName ? canonicalSchemesIndex.get(normName) : null) ||
-           null;
+        canonicalSchemesIndex.get(cleanId.replace(/-/g, '_')) ||
+        canonicalSchemesIndex.get(cleanId.replace(/_/g, '-')) ||
+        (hashedClean ? canonicalSchemesIndex.get(hashedClean) : null) ||
+        (normName ? canonicalSchemesIndex.get(normName) : null) ||
+        null;
 };
 
 /**
@@ -418,7 +418,7 @@ const getSchemeColumns = async () => {
             lastColumnCheck = now;
             return detectedSchemeColumns;
         }
-    } catch (_) {}
+    } catch (_) { }
     return detectedSchemeColumns || new Set();
 };
 
@@ -482,8 +482,8 @@ const formatSchemeRecord = (row) => {
     const primaryCategory = categories.length > 0 ? categories[0] : (row.category || row.benefit_type || row.beneficiary_type || row.type || null);
 
     const canonicalMeta = getCanonicalSchemeMetadata(slug) ||
-                          getCanonicalSchemeMetadata(row.id) ||
-                          getCanonicalSchemeMetadata(schemeName);
+        getCanonicalSchemeMetadata(row.id) ||
+        getCanonicalSchemeMetadata(schemeName);
 
     // Fall back to canonical required documents if database row does not have them populated
     if (docs.length === 0 && canonicalMeta?.documents_required) {
@@ -1080,14 +1080,14 @@ const getFaqsBySchemeSlug = async (slug) => {
                 faqs
             };
         }
-    } catch (_) {}
+    } catch (_) { }
 
     // 2. Query canonical in-memory index from authoritative dataset
     const faqIndex = getCanonicalFaqsIndex();
     const canonFaqs = faqIndex.get(cleanSlug) ||
-                      faqIndex.get(cleanSlug.replace(/-/g, '_')) ||
-                      faqIndex.get(cleanSlug.replace(/_/g, '-')) ||
-                      [];
+        faqIndex.get(cleanSlug.replace(/-/g, '_')) ||
+        faqIndex.get(cleanSlug.replace(/_/g, '-')) ||
+        [];
 
     return {
         source: canonFaqs.length > 0 ? 'canonical_faqs' : 'database',
@@ -1144,7 +1144,7 @@ const getAllFaqs = async ({ limit = 50, offset = 0 } = {}) => {
                 faqs
             };
         }
-    } catch (_) {}
+    } catch (_) { }
 
     // Fallback: paginate canonical FAQ index
     const faqIndex = getCanonicalFaqsIndex();
@@ -1275,8 +1275,8 @@ const recommendSchemes = async (applicantId, { query = 'schemes matching my prof
                         user_id: applicantId,
                         scheme_id: rec.scheme_id,
                         verdict: rec.eligibility_status === 'PASS' ? 'ELIGIBLE'
-                               : rec.eligibility_status === 'FAIL' ? 'NOT_ELIGIBLE'
-                               : 'MANUAL_REVIEW',
+                            : rec.eligibility_status === 'FAIL' ? 'NOT_ELIGIBLE'
+                                : 'MANUAL_REVIEW',
                         evaluated_rules: {
                             eligibility_status: rec.eligibility_status,
                             compatibility_score: rec.compatibility_score,
@@ -1412,7 +1412,7 @@ const getApplicableSchemesCatalog = async (targetState = 'Gujarat') => {
             stateSchemes = filterApplicantRelevantSchemes(stateRes.schemes, cleanState);
             rawStateCount = stateSchemes.length;
         }
-    } catch (_) {}
+    } catch (_) { }
 
     // Fallback if searchSchemes was mocked or DB returned count-only
     if (stateSchemes.length === 0) {
@@ -1430,7 +1430,7 @@ const getApplicableSchemesCatalog = async (targetState = 'Gujarat') => {
                     rawStateCount = count;
                 }
             }
-        } catch (_) {}
+        } catch (_) { }
     }
 
     // 2. Fetch Central schemes
@@ -1442,7 +1442,7 @@ const getApplicableSchemesCatalog = async (targetState = 'Gujarat') => {
             centralSchemes = filterApplicantRelevantSchemes(centralRes.schemes, cleanState).filter(isCentralScheme);
             rawCentralCount = centralSchemes.length;
         }
-    } catch (_) {}
+    } catch (_) { }
 
     // Fallback if searchSchemes returned empty or was mocked
     if (centralSchemes.length === 0) {
@@ -1462,7 +1462,7 @@ const getApplicableSchemesCatalog = async (targetState = 'Gujarat') => {
                     }
                 }
             }
-        } catch (_) {}
+        } catch (_) { }
     }
 
     // If database returned count-only or Central was empty from DB mock, resolve from canonical index
@@ -1485,10 +1485,10 @@ const getApplicableSchemesCatalog = async (targetState = 'Gujarat') => {
                                 state: 'All India'
                             }));
                         }
-                    } catch (_) {}
+                    } catch (_) { }
                 }
             }
-        } catch (_) {}
+        } catch (_) { }
         if (canonicalCentral.length > 0) {
             centralSchemes = filterApplicantRelevantSchemes(canonicalCentral, cleanState).filter(isCentralScheme);
             rawCentralCount = centralSchemes.length;

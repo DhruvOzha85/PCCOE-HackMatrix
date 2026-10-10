@@ -16,9 +16,16 @@ export const SUPPORTED_DOC_TYPES = [
   { id: 'address_proof', name: 'Address Proof', category: 'Residency Verification', purpose: 'Address Proof', iconType: 'map-pin', iconColor: 'cyan' },
   { id: 'udyam', name: 'Udyam Registration', category: 'MSME Verification', purpose: 'Business Eligibility', iconType: 'award', iconColor: 'purple' },
   { id: 'itr', name: 'Income Tax Return (ITR)', category: 'Financial Verification', purpose: 'Income Verification', iconType: 'file-text', iconColor: 'green' },
-  { id: 'land', name: 'Land Records (7/12 Extract)', category: 'Revenue Department', purpose: 'Agriculture Proof', iconType: 'home', iconColor: 'amber' },
+  { id: 'land', name: 'Land Records (7/12 Extract / 8-A)', category: 'Revenue Department', purpose: 'Agriculture & Farm Proof', iconType: 'home', iconColor: 'amber' },
   { id: 'photo', name: 'Passport Size Photo', category: 'Visual Verification', purpose: 'Identity Verification', iconType: 'image', iconColor: 'rose' },
-  { id: 'disability_cert', name: 'Disability Certificate', category: 'Medical Board', purpose: 'Affirmative Action', iconType: 'scroll', iconColor: 'blue' }
+  { id: 'disability_cert', name: 'Disability Certificate', category: 'Medical Board', purpose: 'Affirmative Action', iconType: 'scroll', iconColor: 'blue' },
+  { id: 'labour_card', name: 'Labour Card / BOCW Registration', category: 'Labour Welfare Board', purpose: 'Worker Eligibility Proof', iconType: 'award', iconColor: 'amber' },
+  { id: 'widow_cert', name: 'Widow Certificate', category: 'Revenue Department', purpose: 'Marital Status Benefit', iconType: 'scroll', iconColor: 'rose' },
+  { id: 'death_cert', name: 'Death Certificate of Worker', category: 'Department of Births & Deaths', purpose: 'Demise & Dependent Benefit Proof', iconType: 'file-text', iconColor: 'purple' },
+  { id: 'age_proof', name: 'Age Proof / Birth Certificate', category: 'Competent Authority', purpose: 'Age Eligibility Proof', iconType: 'id-card', iconColor: 'blue' },
+  { id: 'consent_letter', name: 'Consent Letter / NOC', category: 'Land / Joint Holder Declaration', purpose: 'Joint Account / Land Consent', iconType: 'scroll', iconColor: 'cyan' },
+  { id: 'forest_rights', name: 'Van Adhikar Patra / Forest Sanad', category: 'Forest Revenue Department', purpose: 'Forest Area Farmer Eligibility', iconType: 'scroll', iconColor: 'green' },
+  { id: 'other_doc', name: 'Any Other Supporting Document', category: 'Optional Verification Proof', purpose: 'Conditional / Supplementary Evidence', iconType: 'file-text', iconColor: 'blue' }
 ];
 
 export const DOC_TYPE_LOOKUP = Object.fromEntries(SUPPORTED_DOC_TYPES.map(d => [d.id, d]));
@@ -57,28 +64,50 @@ export const STORAGE_APPLICATIONS_KEY = 'fin_associated_applications_data';
 export const INITIAL_TICKETS = [];
 
 /**
- * Normalizes statutory requirement identifiers to standard vault document types:
- * caste -> caste_cert
- * address -> address_proof
- * bank -> bank_passbook
- * income -> income_cert
+ * Normalizes statutory requirement identifiers to standard vault document types
  */
 export function normalizeDocRequirementId(rawId) {
   if (!rawId) return 'address_proof';
-  const clean = String(rawId).toLowerCase().trim().replace(/[^a-z0-9_]/g, '_');
-  if (clean === 'caste' || clean.includes('caste') || clean.includes('jati')) return 'caste_cert';
-  if (clean === 'address' || clean.includes('address') || clean.includes('residence') || clean.includes('domicile')) return clean.includes('domicile') ? 'domicile' : 'address_proof';
-  if (clean === 'bank' || clean.includes('bank') || clean.includes('passbook')) return 'bank_passbook';
-  if (clean === 'income' || clean.includes('income') || clean.includes('salary') || clean.includes('aavak')) return 'income_cert';
-  if (clean === 'photo' || clean.includes('photo') || clean.includes('picture')) return 'photo';
-  if (clean === 'aadhaar' || clean.includes('aadhaar') || clean.includes('aadhar') || clean.includes('uidai')) return 'aadhaar';
-  if (clean === 'pan' || clean.includes('pan')) return 'pan';
-  if (clean === 'land' || clean.includes('land') || clean.includes('712') || clean.includes('ror')) return 'land';
-  if (clean === 'domicile') return 'domicile';
-  if (clean === 'udyam' || clean.includes('udyam') || clean.includes('msme')) return 'udyam';
-  if (clean === 'itr' || clean.includes('tax') || clean.includes('itr')) return 'itr';
+  const rawStr = String(rawId).toLowerCase().trim();
+  const clean = rawStr.replace(/[^a-z0-9_]/g, '_');
+
+  if (clean.includes('caste') || clean.includes('jati')) return 'caste_cert';
+  if (clean.includes('labour') || clean.includes('labor') || clean.includes('bocw') || clean.includes('hpbocwwb') || clean.includes('worker_card')) return 'labour_card';
+  if (clean.includes('widow')) return 'widow_cert';
+  if (clean.includes('death')) return 'death_cert';
+  if (clean.includes('age') || clean.includes('birth') || clean.includes('dob')) return 'age_proof';
+  if (clean.includes('consent') || clean.includes('noc') || clean.includes('undertaking')) return 'consent_letter';
+  if (clean.includes('van_adhikar') || clean.includes('sanad') || clean.includes('forest')) return 'forest_rights';
+  if (clean.includes('land') || clean.includes('712') || clean.includes('8a') || clean.includes('8_a') || clean.includes('ror') || clean.includes('khatauni') || clean.includes('fencing')) return 'land';
+  if (clean.includes('address') || clean.includes('residence') || clean.includes('domicile')) return clean.includes('domicile') ? 'domicile' : 'address_proof';
+  if (clean.includes('bank') || clean.includes('passbook') || clean.includes('account')) return 'bank_passbook';
+  if (clean.includes('income') || clean.includes('salary') || clean.includes('aavak') || clean.includes('aay')) return 'income_cert';
+  if (clean.includes('photo') || clean.includes('picture')) return 'photo';
+  if (clean.includes('aadhaar') || clean.includes('aadhar') || clean.includes('uidai')) return 'aadhaar';
+  if (clean.includes('pan')) return 'pan';
+  if (clean.includes('udyam') || clean.includes('msme')) return 'udyam';
+  if (clean.includes('itr') || clean.includes('tax')) return 'itr';
   if (clean.includes('disability') || clean.includes('handicap')) return 'disability_cert';
+  if (clean.includes('other') || clean.includes('optional') || clean.includes('if_required') || clean.includes('if_applicable')) return 'other_doc';
   return clean;
+}
+
+/**
+ * Determines whether a statutory document requirement is conditional or optional.
+ * Conditional/optional documents do NOT block applicant scheme readiness.
+ */
+export function isOptionalRequirement(rawIdOrLabel) {
+  if (!rawIdOrLabel) return false;
+  const str = String(rawIdOrLabel).toLowerCase().trim();
+  return str.includes('(if applicable)') ||
+         str.includes('if applicable') ||
+         str.includes('(if required)') ||
+         str.includes('if required') ||
+         str.includes('(optional)') ||
+         str.includes('optional') ||
+         str.includes('forest areas') ||
+         str.includes('any other') ||
+         str.includes('other document');
 }
 
 /**

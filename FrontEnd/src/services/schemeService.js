@@ -148,6 +148,50 @@ export async function fetchSchemeFaqs(schemeSlug) {
 }
 
 /**
+ * FIN-03: Analyze scheme eligibility with full change analysis, evidence blockers, and recommended actions
+ */
+export async function analyzeSchemeEligibility(schemeId, profile = null) {
+  if (!schemeId) throw new Error('Scheme ID is required');
+
+  const res = await authenticatedFetch(`${API_BASE}/api/eligibility/analyze`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ schemeId, profile })
+  });
+
+  if (!res.ok) {
+    const errJson = await res.json().catch(() => ({}));
+    const error = new Error(errJson.message || `Eligibility analysis failed (${res.status})`);
+    error.status = res.status;
+    throw error;
+  }
+
+  return await res.json();
+}
+
+/**
+ * FIN-03: Recompute eligibility after profile/evidence change and compare against previous result
+ */
+export async function recomputeSchemeEligibility(schemeId, profileOverride = null, previousResult = null) {
+  if (!schemeId) throw new Error('Scheme ID is required');
+
+  const res = await authenticatedFetch(`${API_BASE}/api/eligibility/${encodeURIComponent(schemeId)}/recompute`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ profile: profileOverride, previousResult })
+  });
+
+  if (!res.ok) {
+    const errJson = await res.json().catch(() => ({}));
+    const error = new Error(errJson.message || `Recomputation failed (${res.status})`);
+    error.status = res.status;
+    throw error;
+  }
+
+  return await res.json();
+}
+
+/**
  * Fetch unified canonical catalog of applicable schemes for citizen's state and Central jurisdiction
  */
 export async function fetchApplicableSchemesCatalog(state = 'Gujarat') {
@@ -168,4 +212,71 @@ export async function fetchApplicableSchemesCatalog(state = 'Gujarat') {
     schemes: json?.schemes || []
   };
 }
+
+/**
+ * Addition 2: Evidence-Based Cross-Document Verification API Helpers
+ */
+export async function verifySchemeEvidence(schemeId, applicationId = null) {
+  if (!schemeId) throw new Error('Scheme ID is required');
+
+  const res = await authenticatedFetch(`${API_BASE}/api/eligibility/${encodeURIComponent(schemeId)}/verify-evidence`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ applicationId })
+  });
+
+  if (!res.ok) {
+    const errJson = await res.json().catch(() => ({}));
+    throw new Error(errJson.message || `Evidence verification failed (${res.status})`);
+  }
+
+  return await res.json();
+}
+
+export async function fetchSchemeEvidenceResults(schemeId, applicationId = null) {
+  if (!schemeId) throw new Error('Scheme ID is required');
+
+  const query = applicationId ? `?applicationId=${encodeURIComponent(applicationId)}` : '';
+  const res = await authenticatedFetch(`${API_BASE}/api/eligibility/${encodeURIComponent(schemeId)}/evidence-results${query}`);
+
+  if (!res.ok) {
+    const errJson = await res.json().catch(() => ({}));
+    throw new Error(errJson.message || `Failed to fetch evidence results (${res.status})`);
+  }
+
+  return await res.json();
+}
+
+export async function evaluateVerificationBaselines(split = 'held_out_test') {
+  const res = await authenticatedFetch(`${API_BASE}/api/eligibility/evaluate-baselines`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ split })
+  });
+
+  if (!res.ok) {
+    const errJson = await res.json().catch(() => ({}));
+    throw new Error(errJson.message || `Baseline evaluation failed (${res.status})`);
+  }
+
+  return await res.json();
+}
+
+export async function resolveEvidenceConflict(conflictId, { reason, selectedSource = 'DOCUMENT', authoritativeValue = null }) {
+  if (!conflictId) throw new Error('Conflict ID is required');
+
+  const res = await authenticatedFetch(`${API_BASE}/api/reviewer/evidence/conflicts/${encodeURIComponent(conflictId)}/resolve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason, selectedSource, authoritativeValue })
+  });
+
+  if (!res.ok) {
+    const errJson = await res.json().catch(() => ({}));
+    throw new Error(errJson.message || `Failed to resolve conflict (${res.status})`);
+  }
+
+  return await res.json();
+}
+
 
