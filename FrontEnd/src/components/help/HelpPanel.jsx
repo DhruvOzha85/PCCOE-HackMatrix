@@ -170,7 +170,7 @@ export default function HelpPanel({ isOpen, onClose, onStartTour }) {
                 <span>Interactive Guided Tour</span>
               </div>
               <p className="help-quick-action-desc">
-                Take a 7-step walkthrough of HackMatrix features and workflows.
+                Take a 7-step walkthrough of FIN features and workflows.
               </p>
             </div>
             <button

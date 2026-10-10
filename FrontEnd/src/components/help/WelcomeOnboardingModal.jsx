@@ -143,7 +143,7 @@ export default function WelcomeOnboardingModal({ isOpen, onStartTour, onDismiss 
                   <span>Namaste, {userName}!</span>
                 </span>
                 <h2 id="welcome-modal-title" className="welcome-title">
-                  Welcome to HackMatrix
+                  Welcome to <span className="notranslate" translate="no" lang="en">FIN</span>
                 </h2>
                 <p className="welcome-subtitle">
                   Your simple, trusted guide to discovering government schemes, checking what benefits you qualify for, and applying without paperwork headaches.

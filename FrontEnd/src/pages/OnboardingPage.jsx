@@ -74,7 +74,7 @@ export default function OnboardingPage() {
           <FinLogoClear />
           <div className="onboarding-page-emblem" aria-hidden="true">
             <img src={ashokStambhGold} alt="National Emblem" className="welcome-emblem-img" />
-            <span>Govt. of India • HackMatrix FIN-03</span>
+            <span>Govt. of India • FIN-03 Welfare Portal</span>
           </div>
         </div>
 
@@ -130,7 +130,7 @@ export default function OnboardingPage() {
                 <span>Namaste, {userName}!</span>
               </span>
               <h1 className="onboarding-main-title">
-                Welcome to HackMatrix
+                Welcome to <span className="notranslate" translate="no" lang="en">FIN</span>
               </h1>
               <p className="onboarding-main-subtitle">
                 Your simple, trusted guide to discovering official government schemes, understanding what benefits you qualify for, and applying with confidence.

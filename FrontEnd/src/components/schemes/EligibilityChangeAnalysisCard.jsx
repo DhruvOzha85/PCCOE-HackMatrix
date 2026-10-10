@@ -19,9 +19,7 @@ import {
   BarChart2,
   Eye,
   ShieldCheck,
-  Scale,
-  ChevronDown,
-  ChevronUp
+  Scale
 } from 'lucide-react';
 import ContextualHelp from '../help/ContextualHelp';
 import {
@@ -62,151 +60,6 @@ export default function EligibilityChangeAnalysisCard({
   const [benchmarkData, setBenchmarkData] = useState(null);
   const [isLoadingBenchmark, setIsLoadingBenchmark] = useState(false);
   const [benchmarkSplit, setBenchmarkSplit] = useState('held_out_test');
-
-  const [expandedProofIds, setExpandedProofIds] = useState({});
-  const [expandedConflictIds, setExpandedConflictIds] = useState({});
-
-  const toggleProof = (id) => {
-    setExpandedProofIds(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const toggleConflict = (id) => {
-    setExpandedConflictIds(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const formatFactValue = (val, category = '', unit = '') => {
-    if (val === null || val === undefined) return '';
-    const cat = String(category).toLowerCase();
-    if (cat.includes('income') || cat.includes('salary') || cat.includes('amount') || cat.includes('earning') || unit === 'INR/year') {
-      return typeof val === 'number' ? `₹${val.toLocaleString('en-IN')}` : String(val);
-    }
-    if (cat.includes('age') || cat.includes('dob') || unit === 'years') {
-      return typeof val === 'number' ? `${Math.round(val)} years` : String(val);
-    }
-    if (cat.includes('land') || unit === 'acres') {
-      return typeof val === 'number' ? `${val} acres` : String(val);
-    }
-    return String(val);
-  };
-
-  const getHumanStatus = (status) => {
-    switch (status) {
-      case 'SUPPORTING':
-        return {
-          label: 'Verified (Meets Rule)',
-          badgeBg: '#ECFDF3',
-          badgeColor: '#027A48',
-          badgeBorder: '#A6F4C5',
-          icon: <CheckCircle2 size={13} />
-        };
-      case 'CONTRADICTING':
-        return {
-          label: 'Does Not Meet Rule',
-          badgeBg: '#FEF3F2',
-          badgeColor: '#B42318',
-          badgeBorder: '#FECDCA',
-          icon: <XCircle size={13} />
-        };
-      case 'INSUFFICIENT':
-      default:
-        return {
-          label: 'Needs Document Proof',
-          badgeBg: '#FFFAEB',
-          badgeColor: '#B54708',
-          badgeBorder: '#FEDF89',
-          icon: <AlertTriangle size={13} />
-        };
-    }
-  };
-
-  const getCategoryTitle = (cat = '') => {
-    const c = String(cat).toLowerCase();
-    if (c.includes('residence') || c.includes('state') || c.includes('domicile')) return 'State of Residence';
-    if (c.includes('income')) return 'Annual Family Income';
-    if (c.includes('age') || c.includes('dob')) return 'Age / Date of Birth';
-    if (c.includes('caste') || c.includes('category')) return 'Social Category';
-    if (c.includes('land')) return 'Agricultural Landholding';
-    if (c.includes('occ')) return 'Occupation';
-    return cat.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  };
-
-  const groupConflictSources = (sourceExcerpts = [], category = '') => {
-    const map = new Map();
-
-    (sourceExcerpts || []).forEach(src => {
-      const isProfile = (src.source || '').toLowerCase().includes('profile');
-      const valKey = String(src.value ?? '').trim().toLowerCase();
-      const key = isProfile ? '__profile__' : valKey;
-
-      if (!map.has(key)) {
-        map.set(key, {
-          isProfile,
-          rawVal: src.value,
-          displayVal: formatFactValue(src.value, category),
-          fileNames: [],
-          excerpts: []
-        });
-      }
-      const item = map.get(key);
-      if (!isProfile) {
-        item.fileNames.push(src.source || 'Document');
-      }
-      if (src.excerpt) {
-        item.excerpts.push({
-          source: src.source,
-          excerpt: src.excerpt,
-          page: src.page
-        });
-      }
-    });
-
-    return Array.from(map.values());
-  };
-
-  const sanitizeExcerpt = (rawExcerpt) => {
-    if (!rawExcerpt) return 'Official document verified for eligibility compliance.';
-    let text = String(rawExcerpt).trim();
-
-    // Strip OCR page headers: "--- [Page 1] ---"
-    text = text.replace(/---\s*\[Page\s*\d+\]\s*---/gi, '').trim();
-
-    // Strip test document watermark banners & boilerplate
-    text = text.replace(/SAMPLE\s+ONLY\s+SAMPLE\s+DOCUMENT\s*[-—–]\s*FOR\s+OCR\s*\/\s*SCHEME\s+CHECKER\s+TESTING\s+ONLY/gi, '');
-    text = text.replace(/SAMPLE\s+FOR\s+SOFTWARE\s+TESTING\s+ONLY\s*[•*·\-]?\s*NOT\s+A\s+VALID\s+[A-Z\s\/]+SAMPLE\s+DOCUMENT\s*[-—–]?\s*[A-Z\s\/]*/gi, '');
-    text = text.replace(/SAMPLE\s+DRAFT\s+FICTIONAL\s+TEST\s+DATA\s*[•*·\-]?\s*NOT\s+GOVERNMENT-[A-Z]*/gi, '');
-    text = text.replace(/[-—–]\s*Sample\s+Ledger\s+FICTIONAL\s+TES[A-Z]*/gi, '');
-    text = text.replace(/FICTIONAL\s+TES[A-Z]*/gi, '');
-    text = text.replace(/^[\s—–•*-]+|[\s—–•*-]+$/g, '').trim();
-
-    if (text.length < 5) {
-      return 'Official document verified for scheme compliance.';
-    }
-
-    return text;
-  };
-
-  const formatDocTitle = (filename = '', docType = '') => {
-    if (!filename && !docType) return 'Official Document';
-    let name = String(filename || docType);
-    name = name.replace(/\.(pdf|docx|jpg|png|jpeg|webp)$/i, '');
-    name = name.replace(/_sample(\s*\(\d+\))?/gi, '');
-    name = name.replace(/[-_]+/g, ' ').trim();
-    return name.replace(/\b\w/g, l => l.toUpperCase());
-  };
-
-  const sanitizeIssuer = (issuer) => {
-    if (!issuer) return null;
-    const str = String(issuer).trim();
-    const lower = str.toLowerCase();
-    const junkTerms = [
-      'period', 'contribution', 'card number', 'not use as', 'sample', 'testing', 
-      'placeholder', 'competent authority', 'unknown', 'null', 'fictional', 'ledger'
-    ];
-    if (junkTerms.some(term => lower.includes(term)) || str.length < 3 || str.length > 55) {
-      return null;
-    }
-    return str;
-  };
 
   useEffect(() => {
     if (changeAnalysis?.evidenceVerificationReport) {
@@ -409,13 +262,13 @@ export default function EligibilityChangeAnalysisCard({
               backgroundColor: isEligible
                 ? '#D1FADF'
                 : (analysis.unmetConditions || []).some(u => u.actionability === 'EXTERNAL_DEPENDENCY')
-                ? '#FEE4E2'
-                : '#FEF0C7',
+                  ? '#FEE4E2'
+                  : '#FEF0C7',
               color: isEligible
                 ? '#027A48'
                 : (analysis.unmetConditions || []).some(u => u.actionability === 'EXTERNAL_DEPENDENCY')
-                ? '#B42318'
-                : '#B54708'
+                  ? '#B42318'
+                  : '#B54708'
             }}
           >
             {analysis.determinationStatus || analysis.determination}
@@ -696,14 +549,13 @@ export default function EligibilityChangeAnalysisCard({
                     letterSpacing: '0.3px',
                     backgroundColor:
                       evidenceReport.overall_status === 'VERIFIED' ? '#ECFDF5' :
-                      evidenceReport.overall_status === 'CONFLICT_DETECTED' ? '#FEF2F2' : '#FFFBEB',
+                        evidenceReport.overall_status === 'CONFLICT_DETECTED' ? '#FEF2F2' : '#FFFBEB',
                     color:
                       evidenceReport.overall_status === 'VERIFIED' ? '#065F46' :
-                      evidenceReport.overall_status === 'CONFLICT_DETECTED' ? '#991B1B' : '#92400E',
-                    border: `1px solid ${
-                      evidenceReport.overall_status === 'VERIFIED' ? '#A7F3D0' :
-                      evidenceReport.overall_status === 'CONFLICT_DETECTED' ? '#FECACA' : '#FDE68A'
-                    }`
+                        evidenceReport.overall_status === 'CONFLICT_DETECTED' ? '#991B1B' : '#92400E',
+                    border: `1px solid ${evidenceReport.overall_status === 'VERIFIED' ? '#A7F3D0' :
+                        evidenceReport.overall_status === 'CONFLICT_DETECTED' ? '#FECACA' : '#FDE68A'
+                      }`
                   }}
                 >
                   STATUS: {evidenceReport.overall_status}
@@ -763,26 +615,23 @@ export default function EligibilityChangeAnalysisCard({
           )}
 
           {/* Condition-by-Condition Evidence Items */}
-          {((evidenceReport?.condition_results && evidenceReport.condition_results.length > 0) || (evidenceReport?.conditions && evidenceReport.conditions.length > 0)) ? (
+          {evidenceReport?.condition_results && evidenceReport.condition_results.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {(evidenceReport.condition_results || evidenceReport.conditions).map((cRes, cIdx) => {
+              {evidenceReport.condition_results.map((cRes, cIdx) => {
                 const status = cRes.overall_status;
                 const isSup = status === 'SUPPORTING';
                 const isCon = status === 'CONTRADICTING';
                 const isIns = status === 'INSUFFICIENT';
 
-                const badge = getHumanStatus(status);
-                const condKey = cRes.condition_id || `cond_${cIdx}`;
-                const isProofOpen = expandedProofIds[condKey];
+                const badgeBg = isSup ? '#ECFDF5' : isCon ? '#FEF2F2' : '#FFFBEB';
+                const badgeColor = isSup ? '#065F46' : isCon ? '#991B1B' : '#92400E';
+                const badgeBorder = isSup ? '#A7F3D0' : isCon ? '#FECACA' : '#FDE68A';
 
-                // Filter to only genuine evidence for this condition
-                const relevantEvidence = isSup
-                  ? (cRes.supporting_evidence || [])
-                  : isCon
-                  ? (cRes.contradicting_evidence || [])
-                  : (cRes.insufficient_evidence || []).filter(e => e.excerpt && !e.excerpt.includes('contains no verifiable text'));
-
-                const hasConflicts = cRes.detected_conflicts && cRes.detected_conflicts.length > 0;
+                const evidenceList = [
+                  ...(cRes.supporting_evidence || []),
+                  ...(cRes.contradicting_evidence || []),
+                  ...(cRes.insufficient_evidence || [])
+                ];
 
                 return (
                   <div
@@ -795,20 +644,14 @@ export default function EligibilityChangeAnalysisCard({
                       boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
                     }}
                   >
-                    {/* Top Row: Title, Limits, and Human-Friendly Badge */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#1E293B' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B' }}>
                           {cRes.description}
                         </span>
                         {cRes.threshold !== null && cRes.threshold !== undefined && (
-                          <span style={{ fontSize: '11px', color: '#475569', backgroundColor: '#F1F5F9', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
-                            Requirement: {formatFactValue(cRes.threshold, cRes.category, cRes.unit)}
-                          </span>
-                        )}
-                        {cRes.actual_value !== null && cRes.actual_value !== undefined && (
-                          <span style={{ fontSize: '11px', color: isSup ? '#027A48' : '#B42318', backgroundColor: isSup ? '#ECFDF3' : '#FEF3F2', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
-                            Found in Proof: {formatFactValue(cRes.actual_value, cRes.category, cRes.unit)}
+                          <span style={{ fontSize: '11px', color: '#64748B', backgroundColor: '#F1F5F9', padding: '2px 6px', borderRadius: '4px' }}>
+                            Limit: {String(cRes.threshold)} {cRes.unit || ''}
                           </span>
                         )}
                       </div>
@@ -817,130 +660,65 @@ export default function EligibilityChangeAnalysisCard({
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '5px',
-                          padding: '4px 10px',
+                          gap: '4px',
+                          padding: '3px 8px',
                           borderRadius: '6px',
                           fontSize: '11.5px',
                           fontWeight: 700,
-                          backgroundColor: badge.badgeBg,
-                          color: badge.badgeColor,
-                          border: `1px solid ${badge.badgeBorder}`
+                          backgroundColor: badgeBg,
+                          color: badgeColor,
+                          border: `1px solid ${badgeBorder}`
                         }}
                       >
-                        {badge.icon}
-                        {badge.label}
+                        {isSup && <CheckCircle2 size={12} />}
+                        {isCon && <XCircle size={12} />}
+                        {isIns && <AlertTriangle size={12} />}
+                        {status}
                       </span>
                     </div>
 
-                    {/* Short, plain-language explanation */}
                     <p style={{ margin: '4px 0 8px 0', fontSize: '12.5px', color: '#475569', lineHeight: 1.5 }}>
-                      {hasConflicts
-                        ? 'Discrepancy detected between your documents and profile. Please see the discrepancy box below to resolve.'
-                        : cRes.explanation}
+                      {cRes.explanation}
                     </p>
 
-                    {/* Clean Excerpts Section - Compact & User-Friendly */}
-                    {relevantEvidence.length > 0 ? (
-                      <div style={{ marginTop: '8px' }}>
-                        {/* Show first 1-2 excerpts directly */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          {(isProofOpen ? relevantEvidence : relevantEvidence.slice(0, 1)).map((ev, evIdx) => {
-                            const cleanQuote = sanitizeExcerpt(ev.excerpt);
-                            const docTitle = formatDocTitle(ev.filename, ev.document_type);
-                            const cleanIssuer = sanitizeIssuer(ev.issuer);
-                            const borderColor = isSup ? '#10B981' : isCon ? '#EF4444' : '#F59E0B';
-
-                            return (
-                              <div
-                                key={evIdx}
-                                style={{
-                                  padding: '10px 14px',
-                                  borderRadius: '8px',
-                                  backgroundColor: '#FFFFFF',
-                                  border: '1px solid #E2E8F0',
-                                  borderLeft: `4px solid ${borderColor}`,
-                                  boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-                                }}
-                              >
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', marginBottom: '6px' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <span style={{ fontSize: '13px' }}>📄</span>
-                                    <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#1E293B' }}>
-                                      {docTitle}
-                                    </span>
-                                    {ev.page && (
-                                      <span style={{ fontSize: '11px', color: '#64748B', backgroundColor: '#F1F5F9', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
-                                        Page {ev.page}
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  {cleanIssuer && (
-                                    <span style={{ fontSize: '11px', color: '#475569', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', padding: '1px 7px', borderRadius: '4px' }}>
-                                      🏛️ {cleanIssuer}
-                                    </span>
-                                  )}
-                                </div>
-
-                                <div
-                                  style={{
-                                    fontSize: '12px',
-                                    color: '#334155',
-                                    fontStyle: 'italic',
-                                    lineHeight: 1.5,
-                                    backgroundColor: '#F8FAFC',
-                                    padding: '8px 12px',
-                                    borderRadius: '6px',
-                                    border: '1px solid #EEF2F6',
-                                    marginBottom: ev.normalized_value !== null && ev.normalized_value !== undefined ? '6px' : '0'
-                                  }}
-                                >
-                                  &ldquo;{cleanQuote.length > 200 ? cleanQuote.slice(0, 200) + '...' : cleanQuote}&rdquo;
-                                </div>
-
-                                {ev.normalized_value !== null && ev.normalized_value !== undefined && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', fontSize: '11.5px' }}>
-                                    <span style={{ color: isSup ? '#027A48' : '#B42318', backgroundColor: isSup ? '#ECFDF3' : '#FEF3F2', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                      <CheckCircle2 size={12} />
-                                      Verified Fact: {formatFactValue(ev.normalized_value, cRes.category, cRes.unit)}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Collapsible toggle if more than 1 evidence item */}
-                        {relevantEvidence.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => toggleProof(condKey)}
+                    {/* Traceable Excerpts Provenance */}
+                    {evidenceList.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                        {evidenceList.map((ev, evIdx) => (
+                          <div
+                            key={evIdx}
                             style={{
-                              marginTop: '6px',
-                              background: 'none',
-                              border: 'none',
-                              color: '#0F766E',
-                              fontSize: '11.5px',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              padding: 0
+                              padding: '10px 12px',
+                              borderRadius: '6px',
+                              backgroundColor: '#F8FAFC',
+                              border: '1px solid #E2E8F0',
+                              borderLeft: `3px solid ${isSup ? '#10B981' : isCon ? '#EF4444' : '#F59E0B'}`
                             }}
                           >
-                            <span>{isProofOpen ? 'Hide extra document quotes' : `View ${relevantEvidence.length - 1} more document quote${relevantEvidence.length - 1 > 1 ? 's' : ''}`}</span>
-                            {isProofOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                          </button>
-                        )}
+                            <div style={{ fontSize: '12px', color: '#334155', fontStyle: 'italic', marginBottom: '6px', lineHeight: 1.4 }}>
+                              &ldquo;{ev.excerpt}&rdquo;
+                            </div>
+
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '11px', color: '#64748B' }}>
+                              <span><strong>Document:</strong> {ev.filename || ev.document_type}</span>
+                              {ev.issuer && <span><strong>Issuer:</strong> {ev.issuer}</span>}
+                              {ev.page && <span><strong>Page:</strong> {ev.page}</span>}
+                              {ev.document_date && <span><strong>Issue Date:</strong> {ev.document_date}</span>}
+                              {ev.normalized_value !== null && ev.normalized_value !== undefined && (
+                                <span style={{ color: '#0F766E', fontWeight: 600 }}>
+                                  <strong>Verified Fact:</strong> {typeof ev.normalized_value === 'number' ? `₹${ev.normalized_value.toLocaleString('en-IN')}` : String(ev.normalized_value)}
+                                </span>
+                              )}
+                              <span><strong>Method:</strong> {ev.method}</span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ) : isIns ? (
-                      <div style={{ padding: '8px 12px', borderRadius: '6px', backgroundColor: '#F8FAFC', border: '1px dashed #CBD5E1', fontSize: '11.5px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
-                        <Info size={13} color="#94A3B8" />
-                        <span>No official document verifying this requirement was found. Please upload the required document.</span>
+                    ) : (
+                      <div style={{ fontSize: '11.5px', color: '#94A3B8', fontStyle: 'italic' }}>
+                        No uploaded documents contain explicit statements for this statutory condition.
                       </div>
-                    ) : null}
+                    )}
                   </div>
                 );
               })}
@@ -951,141 +729,62 @@ export default function EligibilityChangeAnalysisCard({
             </div>
           )}
 
-          {/* Cross-Document Conflicts Sub-section: Grouped, Clean & Short */}
+          {/* Cross-Document Conflicts Sub-section */}
           {evidenceReport?.detected_conflicts && evidenceReport.detected_conflicts.length > 0 && (
-            <div style={{ marginTop: '18px', paddingTop: '16px', borderTop: '1px solid #E2E8F0' }}>
+            <div style={{ marginTop: '18px', paddingTop: '16px', borderTop: '1px solid #CBD5E1' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                <AlertCircle size={16} color="#B42318" />
-                <h5 style={{ margin: 0, fontSize: '13.5px', fontWeight: 700, color: '#B42318' }}>
-                  Action Needed: Detected Document Discrepancies ({evidenceReport.detected_conflicts.length})
+                <AlertCircle size={16} color="#B91C1C" />
+                <h5 style={{ margin: 0, fontSize: '13.5px', fontWeight: 700, color: '#B91C1C' }}>
+                  Detected Cross-Document Discrepancies ({evidenceReport.detected_conflicts.length})
                 </h5>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {evidenceReport.detected_conflicts.map((conf, cfIdx) => {
-                  const confId = conf.conflict_id || `conf_${cfIdx}`;
-                  const isConfOpen = expandedConflictIds[confId];
-                  const groups = groupConflictSources(conf.source_excerpts, conf.field_category);
-
-                  const categoryLabel = getCategoryTitle(conf.field_category);
-
-                  return (
-                    <div
-                      key={cfIdx}
-                      style={{
-                        padding: '12px 14px',
-                        borderRadius: '8px',
-                        backgroundColor: '#FEF3F2',
-                        border: '1px solid #FECDCA'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#912018' }}>
-                          Discrepancy in {categoryLabel}
-                        </span>
-                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#B42318', backgroundColor: '#FEE4E2', padding: '2px 8px', borderRadius: '4px' }}>
-                          Needs Verification
-                        </span>
-                      </div>
-
-                      {/* Clean 1-line explanation */}
-                      <p style={{ margin: '0 0 10px 0', fontSize: '12.5px', color: '#55160C', lineHeight: 1.4 }}>
-                        {conf.explanation}
-                      </p>
-
-                      {/* Grouped Comparison Pills */}
-                      {groups.length > 0 && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
-                          {groups.map((grp, gIdx) => (
-                            <div
-                              key={gIdx}
-                              style={{
-                                flex: '1 1 200px',
-                                backgroundColor: '#FFFFFF',
-                                borderRadius: '8px',
-                                border: grp.isProfile ? '1.5px solid #FDA29B' : '1px solid #EAECF0',
-                                padding: '10px 12px'
-                              }}
-                            >
-                              <div style={{ fontSize: '11px', fontWeight: 700, color: grp.isProfile ? '#B42318' : '#344054', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                                {grp.isProfile ? '👤 Self-Declared Profile' : `📄 Uploaded Proof (${grp.fileNames.length} file${grp.fileNames.length > 1 ? 's' : ''})`}
-                              </div>
-                              <div style={{ fontSize: '15px', fontWeight: 700, color: '#101828' }}>
-                                {grp.displayVal}
-                              </div>
-                              {!grp.isProfile && grp.fileNames.length > 0 && (
-                                <div style={{ fontSize: '11px', color: '#667085', marginTop: '4px', lineHeight: 1.3 }}>
-                                  {grp.fileNames.slice(0, 2).join(', ')}{grp.fileNames.length > 2 ? ` + ${grp.fileNames.length - 2} more` : ''}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Actionable Advice Pill */}
-                      <div style={{ padding: '8px 12px', borderRadius: '6px', backgroundColor: '#FFF6ED', border: '1px solid #FFD6AE', fontSize: '12px', color: '#B54708', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                        <Info size={14} style={{ flexShrink: 0 }} />
-                        <span>
-                          {conf.field_category.includes('residence') || conf.field_category.includes('state')
-                            ? 'Tip: If your state is Himachal Pradesh, update your profile state. If applying for another state, please upload a verified Domicile Certificate for that state.'
-                            : conf.field_category.includes('age')
-                            ? 'Tip: Your profile age does not match your official document date of birth. Update your profile date of birth to resolve.'
-                            : 'Tip: Please update your profile numbers or upload your latest official certificate to resolve.'}
-                        </span>
-                      </div>
-
-                      {/* Collapsible raw document quotes toggle */}
-                      {conf.source_excerpts && conf.source_excerpts.length > 0 && (
-                        <div>
-                          <button
-                            type="button"
-                            onClick={() => toggleConflict(confId)}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: '#912018',
-                              fontSize: '11.5px',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              padding: 0
-                            }}
-                          >
-                            <span>{isConfOpen ? 'Hide raw document excerpts' : `View exact document quotes (${conf.source_excerpts.length})`}</span>
-                            {isConfOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                          </button>
-
-                          {isConfOpen && (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '8px', marginTop: '8px' }}>
-                              {conf.source_excerpts.map((src, sIdx) => {
-                                const cleanQuote = sanitizeExcerpt(src.excerpt);
-                                const docTitle = formatDocTitle(src.source);
-                                return (
-                                  <div key={sIdx} style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #FECDCA', fontSize: '11.5px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
-                                    <div style={{ fontWeight: 700, color: '#912018', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                      <span>📄</span> {docTitle}
-                                    </div>
-                                    <div style={{ fontStyle: 'italic', color: '#450A0A', fontSize: '11.5px', lineHeight: 1.4, backgroundColor: '#FFF5F5', padding: '6px 10px', borderRadius: '6px' }}>
-                                      &ldquo;{cleanQuote}&rdquo;
-                                    </div>
-                                    {src.value !== undefined && (
-                                      <div style={{ marginTop: '6px', fontWeight: 600, color: '#B42318' }}>
-                                        Extracted Fact: {formatFactValue(src.value, conf.field_category)}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      )}
+                {evidenceReport.detected_conflicts.map((conf, cfIdx) => (
+                  <div
+                    key={cfIdx}
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: '8px',
+                      backgroundColor: '#FEF2F2',
+                      border: '1px solid #FECACA'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#991B1B' }}>
+                        Category: {conf.field_category}
+                      </span>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#DC2626', backgroundColor: '#FEE2E2', padding: '2px 6px', borderRadius: '4px' }}>
+                        {conf.severity} PRIORITY ({conf.status})
+                      </span>
                     </div>
-                  );
-                })}
+
+                    <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#7F1D1D' }}>
+                      {conf.explanation}
+                    </p>
+
+                    {/* Side-by-side conflicting excerpts */}
+                    {conf.source_excerpts && conf.source_excerpts.length >= 2 && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
+                        {conf.source_excerpts.map((src, sIdx) => (
+                          <div key={sIdx} style={{ padding: '8px 10px', backgroundColor: '#FFFFFF', borderRadius: '6px', border: '1px solid #FCA5A5', fontSize: '11.5px' }}>
+                            <div style={{ fontWeight: 700, color: '#991B1B', marginBottom: '2px' }}>
+                              Source {sIdx + 1}: {src.source || 'Document'}
+                            </div>
+                            <div style={{ fontStyle: 'italic', color: '#450A0A' }}>
+                              &ldquo;{src.excerpt}&rdquo;
+                            </div>
+                            {src.value !== undefined && (
+                              <div style={{ marginTop: '4px', fontWeight: 600, color: '#B91C1C' }}>
+                                Value: {typeof src.value === 'number' ? `₹${src.value.toLocaleString('en-IN')}` : String(src.value)}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}

@@ -850,59 +850,25 @@ class NLPSemanticEvidenceVerifier:
                     warnings=warnings
                 )
 
-        # Only attach an INSUFFICIENT evidence item if the document is actually relevant to this condition
-        # (e.g. document type matches required types or text contains condition category keywords)
-        cat_key = category.lower()
-        is_type_match = any(req.lower() in doc_type.lower() for req in (condition.required_evidence_types or []))
-        cat_keywords = {
-            "income": ["income", "salary", "earnings", "rupees", "rs.", "inr", "lakh", "emolument"],
-            "annual_income": ["income", "salary", "earnings", "rupees", "rs.", "inr", "lakh", "emolument"],
-            "age": ["age", "birth", "dob", "born", "years old"],
-            "date_of_birth": ["birth", "dob", "born", "age"],
-            "residence": ["resident", "domicile", "residing", "native", "state of"],
-            "state": ["resident", "domicile", "residing", "native", "state of"],
-            "caste": ["caste", "tribe", "category", "obc", "sc", "st"],
-            "social_category": ["caste", "tribe", "category", "obc", "sc", "st"],
-            "land": ["land", "acre", "hectare", "farm", "khasra"],
-            "landholding": ["land", "acre", "hectare", "farm", "khasra"]
-        }
-        has_cat_keyword = any(kw in text.lower() for kw in cat_keywords.get(cat_key, [cat_key]))
-
-        # Sanitize issuer from OCR misclassifications
-        if issuer:
-            iss_str = str(issuer).strip()
-            low_iss = iss_str.lower()
-            if any(junk in low_iss for junk in ["period", "contribution", "card number", "not use as", "sample", "unknown"]):
-                issuer = None
-
-        if is_type_match or has_cat_keyword:
-            cleaned_text = re.sub(r"---\s*\[Page\s*\d+\]\s*---", "", text, flags=re.I)
-            cleaned_text = re.sub(r"SAMPLE\s+ONLY\s+SAMPLE\s+DOCUMENT\s*[-—–]\s*FOR\s+OCR\s*\/\s*SCHEME\s+CHECKER\s+TESTING\s+ONLY", "", cleaned_text, flags=re.I)
-            cleaned_text = re.sub(r"SAMPLE\s+FOR\s+SOFTWARE\s+TESTING\s+ONLY[•*·\-]?\s*NOT\s+A\s+VALID\s+[A-Z\s\/]+SAMPLE\s+DOCUMENT\s*[-—–]?[A-Z\s\/]*", "", cleaned_text, flags=re.I)
-            cleaned_text = re.sub(r"SAMPLE\s+DRAFT\s+FICTIONAL\s+TEST\s+DATA[•*·\-]?\s*NOT\s+GOVERNMENT-[A-Z]*", "", cleaned_text, flags=re.I)
-            cleaned_text = re.sub(r"[-—–]\s*Sample\s+Ledger\s+FICTIONAL\s+TES[A-Z]*", "", cleaned_text, flags=re.I)
-            cleaned_text = re.sub(r"FICTIONAL\s+TES[A-Z]*", "", cleaned_text, flags=re.I)
-            cleaned_text = cleaned_text.strip(" —-–•*")
-            sample_excerpt = cleaned_text[:150].strip() if cleaned_text else f"Document {filename} contains no verifiable text."
-            return ConditionEvidenceItem(
-                evidence_id=f"ev_{doc_id[:8]}_{condition.condition_id}",
-                condition_id=condition.condition_id,
-                document_id=doc_id,
-                document_type=doc_type,
-                filename=filename,
-                issuer=issuer,
-                document_date=doc_date,
-                page=page,
-                excerpt=sample_excerpt,
-                classification=EvidenceClassification.INSUFFICIENT,
-                explanation=f"Inspected {filename} ({doc_type}); insufficient evidence found to substantiate {condition.description}.",
-                normalized_value=None,
-                confidence=0.75,
-                method=self.NAME,
-                warnings=warnings or ["Document lacks conclusive numerical or factual statements for this condition."]
-            )
-
-        return None
+        # If no conclusive supporting/contradicting fact was extracted, preserve traceability with INSUFFICIENT evidence
+        sample_excerpt = text[:150].strip() if text else f"Document {filename} contains no verifiable text."
+        return ConditionEvidenceItem(
+            evidence_id=f"ev_{doc_id[:8]}_{condition.condition_id}",
+            condition_id=condition.condition_id,
+            document_id=doc_id,
+            document_type=doc_type,
+            filename=filename,
+            issuer=issuer,
+            document_date=doc_date,
+            page=page,
+            excerpt=sample_excerpt,
+            classification=EvidenceClassification.INSUFFICIENT,
+            explanation=f"Inspected {filename} ({doc_type}); insufficient evidence found to substantiate {condition.description}.",
+            normalized_value=None,
+            confidence=0.75,
+            method=self.NAME,
+            warnings=warnings or ["Document lacks conclusive numerical or factual statements for this condition."]
+        )
 
     # ─── Fact & Excerpt Extraction Subroutines ───────────────────────────────
 
@@ -1221,30 +1187,14 @@ class NLPSemanticEvidenceVerifier:
                     }
                     for s in residence_sources
                 ]
-                from collections import defaultdict
-                grouped_res = defaultdict(list)
-                for s in residence_sources:
-                    grouped_res[s["value"].strip()].append(s["filename"])
-                
-                parts = []
-                for st_name, flist in grouped_res.items():
-                    has_prof = any("Profile" in fn for fn in flist)
-                    doc_only_count = sum(1 for fn in flist if "Profile" not in fn)
-                    lbl_parts = []
-                    if doc_only_count > 0:
-                        lbl_parts.append(f"{doc_only_count} document{'s' if doc_only_count > 1 else ''}")
-                    if has_prof:
-                        lbl_parts.append("Profile")
-                    parts.append(f"{st_name} ({', '.join(lbl_parts)})")
-                    
-                concise_summary = " vs ".join(parts)
+                summary = " vs ".join(f"{s['filename']} ({s['value']})" for s in residence_sources)
                 conflicts.append(CrossDocumentConflict(
-                    conflict_id=f"cnf_state_{hashlib.md5(concise_summary.encode()).hexdigest()[:8]}",
+                    conflict_id=f"cnf_state_{hashlib.md5(summary.encode()).hexdigest()[:8]}",
                     condition_id=cond_id,
                     field_category="residence",
                     conflicting_evidence_ids=[s["doc_id"] for s in residence_sources],
                     source_excerpts=excerpts,
-                    explanation=f"Conflicting domicile states detected: {concise_summary}.",
+                    explanation=f"Conflicting domicile states detected: {summary}.",
                     severity=ConflictSeverity.CRITICAL,
                     status="OPEN"
                 ))
@@ -1340,31 +1290,14 @@ class NLPSemanticEvidenceVerifier:
                     }
                     for it in items
                 ]
-                
-                from collections import defaultdict
-                grouped_num = defaultdict(list)
-                for it in items:
-                    grouped_num[it[0]].append(it[1].filename)
-                
-                parts = []
-                for val, doc_list in grouped_num.items():
-                    doc_count = len(doc_list)
-                    label = "Profile Declaration" if any("Profile" in d for d in doc_list) else f"{doc_count} document{'s' if doc_count > 1 else ''}"
-                    if "age" in category.lower() or "dob" in category.lower():
-                        parts.append(f"{val:,.0f} years ({label})")
-                    elif "income" in category.lower():
-                        parts.append(f"₹{val:,.0f} ({label})")
-                    else:
-                        parts.append(f"{val} ({label})")
-                        
-                concise_summary = " vs ".join(parts)
+                summary = " vs ".join(f"{it[1].filename} ({it[0]})" for it in items)
                 return CrossDocumentConflict(
-                    conflict_id=f"cnf_{hashlib.md5(concise_summary.encode()).hexdigest()[:8]}",
+                    conflict_id=f"cnf_{hashlib.md5(summary.encode()).hexdigest()[:8]}",
                     condition_id=condition_id,
                     field_category=category,
                     conflicting_evidence_ids=[it[1].document_id for it in items],
                     source_excerpts=excerpts,
-                    explanation=f"Conflicting values detected: {concise_summary}.",
+                    explanation=f"Conflicting values detected across sources: {summary}.",
                     severity=ConflictSeverity.HIGH,
                     status="OPEN"
                 )
@@ -1383,27 +1316,14 @@ class NLPSemanticEvidenceVerifier:
                 }
                 for it in items
             ]
-            
-            from collections import defaultdict
-            grouped_str = defaultdict(list)
-            for it in items:
-                v_key = str(it[0]).strip()
-                grouped_str[v_key].append(it[1].filename)
-                
-            parts = []
-            for val, doc_list in grouped_str.items():
-                doc_count = len(doc_list)
-                label = "Profile Declaration" if any("Profile" in d for d in doc_list) else f"{doc_count} document{'s' if doc_count > 1 else ''}"
-                parts.append(f"'{val}' ({label})")
-                
-            concise_summary = " vs ".join(parts)
+            summary = " vs ".join(f"{it[1].filename} ('{it[0]}')" for it in items)
             return CrossDocumentConflict(
-                conflict_id=f"cnf_{hashlib.md5(concise_summary.encode()).hexdigest()[:8]}",
+                conflict_id=f"cnf_{hashlib.md5(summary.encode()).hexdigest()[:8]}",
                 condition_id=condition_id,
                 field_category=category,
                 conflicting_evidence_ids=[it[1].document_id for it in items],
                 source_excerpts=excerpts,
-                explanation=f"Conflicting declarations detected: {concise_summary}.",
+                explanation=f"Conflicting declarations across sources: {summary}.",
                 severity=ConflictSeverity.MEDIUM,
                 status="OPEN"
             )
