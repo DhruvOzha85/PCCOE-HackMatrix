@@ -451,6 +451,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 18px;
   padding: 0 32px;
   position: sticky;
   top: 0;
@@ -462,7 +463,8 @@
   align-items: center;
   gap: 16px;
   flex: 1;
-  max-width: 760px; /* Lamba search bar across the header */
+  max-width: 660px;
+  min-width: 0;
 }
 
 .menu-toggle-btn {
@@ -732,6 +734,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 /* Notification Button and Popover */
@@ -1313,6 +1316,13 @@
 @media (max-width: 1024px) {
   .app-header {
     padding: 0 20px;
+    gap: 16px;
+  }
+  .header-left {
+    max-width: 460px;
+  }
+  .header-right {
+    gap: 10px;
   }
   .page-container {
     padding: 20px;

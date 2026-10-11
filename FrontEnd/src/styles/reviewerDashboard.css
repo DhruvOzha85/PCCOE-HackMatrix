@@ -737,7 +737,8 @@
   gap: 8px;
 }
 
-.reviewer-inspect-btn {
+.reviewer-inspect-btn,
+.reviewer-action-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -751,9 +752,13 @@
   text-decoration: none;
   transition: all var(--transition-fast);
   white-space: nowrap;
+  cursor: pointer;
+  font-family: inherit;
+  outline: none;
 }
 
-.reviewer-inspect-btn:hover {
+.reviewer-inspect-btn:hover,
+.reviewer-action-btn:hover {
   background-color: var(--primary-green);
   color: var(--text-inverse);
 }
