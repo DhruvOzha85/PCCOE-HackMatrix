@@ -31,6 +31,26 @@ import {
 } from 'lucide-react';
 import '../styles/reviewApplications.css';
 
+function renderStatusBadge(status) {
+  const s = String(status || 'under_review').toLowerCase();
+  if (s === 'under_review' || s === 'pending' || s === 'submitted') {
+    return <span className="reviewer-status-badge under-review">Under Review</span>;
+  }
+  if (s === 'documents_pending' || s === 'documents_required') {
+    return <span className="reviewer-status-badge documents-pending">Documents Pending</span>;
+  }
+  if (s === 'action_required') {
+    return <span className="reviewer-status-badge action-required">Action Required</span>;
+  }
+  if (s === 'approved' || s === 'sanctioned') {
+    return <span className="reviewer-status-badge approved">Approved</span>;
+  }
+  if (s === 'rejected') {
+    return <span className="reviewer-status-badge rejected">Rejected</span>;
+  }
+  return <span className="reviewer-status-badge neutral">{s.replace(/_/g, ' ')}</span>;
+}
+
 export default function ReviewApplicationsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialStatus = searchParams.get('status') || 'all';
@@ -285,45 +305,61 @@ export default function ReviewApplicationsPage() {
                     <th>Applicant</th>
                     <th>Scheme</th>
                     <th>Submission Date</th>
-                    <th>Status</th>
-                    <th>Action</th>
+                    <th>Current Status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredApps.map((app) => {
-                    const statusClass = (app.status || 'under_review').toLowerCase();
-                    const appId = app.id ? `FIN-${String(app.id).slice(0, 8).toUpperCase()}` : 'FIN-APP';
+                    const appId = app.application_number || (app.id ? `FIN-${String(app.id).slice(0, 8).toUpperCase()}` : 'FIN-APP');
                     const dateStr = app.submitted_at || app.created_at
                       ? new Date(app.submitted_at || app.created_at).toLocaleDateString('en-GB')
                       : 'Recent';
+                    const applicantName = app.applicant_name || app.user_name || 'Govt Reviewer Officer';
+                    const applicantSubtitle = app.applicant_role || (app.applicant_id ? 'Citizen Applicant' : '');
+                    const schemeName = app.scheme_name || (app.scheme && app.scheme.name) || 'Scheme Catalog Record';
+                    const schemeSubtitle = app.ministry || app.department || app.scheme_category || 'Government of India';
 
                     return (
                       <tr key={app.id}>
-                        <td>
-                          <strong>{appId}</strong>
+                        <td className="col-app-id">
+                          <span className="reviewer-app-id-text">{appId}</span>
                         </td>
-                        <td>{app.applicant_name || 'Citizen Applicant'}</td>
-                        <td>
-                          <strong>{app.scheme_name || 'Scheme Catalog Record'}</strong>
+                        <td className="col-applicant">
+                          <div className="reviewer-applicant-cell">
+                            <span className="reviewer-applicant-name">{applicantName}</span>
+                            {applicantSubtitle && (
+                              <span className="reviewer-applicant-sub">{applicantSubtitle}</span>
+                            )}
+                          </div>
                         </td>
-                        <td>{dateStr}</td>
-                        <td>
-                          <span className={`reviewer-badge ${statusClass}`}>
-                            {statusClass.replace(/_/g, ' ')}
-                          </span>
+                        <td className="col-scheme">
+                          <div className="reviewer-scheme-cell">
+                            <span className="reviewer-scheme-title">{schemeName}</span>
+                            <span className="reviewer-scheme-ministry">{schemeSubtitle}</span>
+                          </div>
                         </td>
-                        <td>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedAppId(app.id);
-                              setSearchParams({ open: app.id });
-                            }}
-                            className="reviewer-action-btn"
-                          >
-                            <span>Inspect & Decide</span>
-                            <ArrowRight size={13} />
-                          </button>
+                        <td className="col-date">
+                          <span className="reviewer-date-text">{dateStr}</span>
+                        </td>
+                        <td className="col-status">
+                          {renderStatusBadge(app.status)}
+                        </td>
+                        <td className="col-actions">
+                          <div className="reviewer-actions-cell">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedAppId(app.id);
+                                setSearchParams({ open: app.id });
+                              }}
+                              className="reviewer-inspect-btn"
+                              title="Inspect & Review Application"
+                            >
+                              <span>Inspect & Review</span>
+                              <ArrowRight size={13} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );

@@ -382,3 +382,37 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Action Cell & Inspect Button styling matching Reviewer Dashboard */
+.reviewer-actions-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reviewer-inspect-btn,
+.reviewer-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--primary-green, #005B50);
+  background-color: var(--surface-white, #FFFFFF);
+  color: var(--primary-green, #005B50);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all var(--transition-fast, 0.2s ease);
+  white-space: nowrap;
+  cursor: pointer;
+  font-family: inherit;
+  outline: none;
+}
+
+.reviewer-inspect-btn:hover,
+.reviewer-action-btn:hover {
+  background-color: var(--primary-green, #005B50);
+  color: var(--text-inverse, #FFFFFF);
+}
+
