@@ -1,0 +1,489 @@
+/* ==========================================================================
+   DIGILOCKER DIRECT PULL — INDIA STACK / DPI INTEGRATION STYLES
+   ========================================================================== */
+
+.digilocker-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(16, 36, 58, 0.65);
+  backdrop-filter: blur(5px);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: digiFadeIn 0.2s ease-out;
+}
+
+@keyframes digiFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.digilocker-modal-container {
+  background-color: var(--surface-white, #FFFFFF);
+  border-radius: var(--radius-lg, 14px);
+  border: 1px solid var(--border-subtle, #E4E7EC);
+  box-shadow: 0 20px 40px rgba(16, 36, 58, 0.2);
+  width: 100%;
+  max-width: 620px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  animation: digiSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes digiSlideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Header */
+.digilocker-header {
+  padding: 18px 24px;
+  background: linear-gradient(135deg, #094067 0%, #005B50 100%);
+  color: #FFFFFF;
+  border-radius: 13px 13px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.digilocker-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.digilocker-emblem-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.digilocker-title-col h3 {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.digilocker-verified-pill {
+  font-size: 10.5px;
+  padding: 2px 7px;
+  background-color: #087443;
+  color: #FFFFFF;
+  border-radius: 9999px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.digilocker-subtitle {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  margin-top: 2px;
+}
+
+.digilocker-close-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #FFFFFF;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+
+.digilocker-close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Body */
+.digilocker-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Connected Identity Strip */
+.digilocker-id-strip {
+  background-color: #F8F9FA;
+  border: 1px solid #E9ECEF;
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.digilocker-id-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.digilocker-avatar-circle {
+  width: 38px;
+  height: 38px;
+  background-color: #094067;
+  color: #FFFFFF;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.digilocker-id-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #10243A;
+}
+
+.digilocker-id-details {
+  font-size: 11.5px;
+  color: #667085;
+}
+
+.digilocker-aadhaar-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #005B50;
+  background-color: #EBF3F1;
+  padding: 4px 9px;
+  border-radius: 6px;
+  border: 1px solid #BCDCD6;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Document Selection Checklist */
+.digilocker-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #10243A;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.digilocker-doc-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.digilocker-doc-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  border: 1px solid var(--border-medium, #D0D5DD);
+  border-radius: 10px;
+  background-color: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.digilocker-doc-item:hover {
+  border-color: #094067;
+  background-color: #F8FBFE;
+}
+
+.digilocker-doc-item.selected {
+  border-color: #005B50;
+  background-color: #F0F8F6;
+}
+
+.digilocker-doc-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.digilocker-doc-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #EEF4FD;
+  color: #1264D6;
+}
+
+.digilocker-doc-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #10243A;
+}
+
+.digilocker-doc-issuer {
+  font-size: 11px;
+  color: #667085;
+}
+
+.digilocker-checkbox {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 2px solid #D0D5DD;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.digilocker-doc-item.selected .digilocker-checkbox {
+  background-color: #005B50;
+  border-color: #005B50;
+  color: #FFFFFF;
+}
+
+/* Consent Box */
+.digilocker-consent-box {
+  background-color: #F3F2EE;
+  border-left: 3px solid #005B50;
+  padding: 10px 14px;
+  border-radius: 0 8px 8px 0;
+  font-size: 11.5px;
+  color: #344054;
+  line-height: 1.45;
+}
+
+/* OTP Simulation Bar */
+.digilocker-otp-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #FFF9F0;
+  border: 1px dashed #FEDF89;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.digilocker-otp-input {
+  width: 140px;
+  padding: 7px 12px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  border: 1px solid #D0D5DD;
+  border-radius: 6px;
+  text-align: center;
+  background: #FFFFFF;
+}
+
+.digilocker-demo-otp-btn {
+  background: #005B50;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 6px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.15s ease;
+}
+
+.digilocker-demo-otp-btn:hover {
+  background: #00483F;
+}
+
+/* Action Footer */
+.digilocker-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-subtle, #E4E7EC);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #FAFAFA;
+  border-radius: 0 0 13px 13px;
+}
+
+.digilocker-dpi-badge {
+  font-size: 11px;
+  color: #667085;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.digilocker-pull-submit-btn {
+  background: linear-gradient(135deg, #094067 0%, #005B50 100%);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 6px rgba(0, 91, 80, 0.25);
+  transition: all 0.18s ease;
+}
+
+.digilocker-pull-submit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 91, 80, 0.35);
+}
+
+.digilocker-pull-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Sync Animation Stage */
+.digilocker-syncing-box {
+  padding: 36px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 20px;
+}
+
+.digilocker-sync-spinner {
+  width: 56px;
+  height: 56px;
+  border: 4px solid #EBF3F1;
+  border-top-color: #005B50;
+  border-radius: 50%;
+  animation: digiSpin 0.8s linear infinite;
+}
+
+@keyframes digiSpin {
+  to { transform: rotate(360deg); }
+}
+
+.digilocker-stepper-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+  max-width: 400px;
+  width: 100%;
+}
+
+.digilocker-step-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #667085;
+}
+
+.digilocker-step-item.active {
+  font-weight: 700;
+  color: #005B50;
+}
+
+.digilocker-step-item.done {
+  color: #087443;
+}
+
+/* Success Stage */
+.digilocker-success-box {
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+
+.digilocker-success-icon-wrap {
+  width: 64px;
+  height: 64px;
+  background-color: #ECFDF3;
+  color: #087443;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #A6F4C5;
+}
+
+.digilocker-success-title {
+  font-size: 19px;
+  font-weight: 700;
+  color: #10243A;
+}
+
+.digilocker-success-desc {
+  font-size: 13px;
+  color: #667085;
+  max-width: 440px;
+}
+
+.digilocker-readiness-callout {
+  width: 100%;
+  background: linear-gradient(135deg, #EBF3F1 0%, #EEF4FD 100%);
+  border: 1px solid #BCDCD6;
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.digilocker-readiness-score {
+  font-size: 24px;
+  font-weight: 800;
+  color: #005B50;
+}
+
+/* Trigger Button in Vault Header */
+.btn-digilocker-pull {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  background: linear-gradient(135deg, #094067 0%, #005B50 100%);
+  color: #FFFFFF;
+  border: none;
+  border-radius: var(--radius-md, 10px);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(9, 64, 103, 0.2);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.btn-digilocker-pull:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(9, 64, 103, 0.3);
+}
+
+.btn-digilocker-flag {
+  border-radius: 2px;
+}

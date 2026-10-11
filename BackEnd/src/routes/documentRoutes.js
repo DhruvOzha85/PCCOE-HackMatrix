@@ -8,6 +8,7 @@ const router = express.Router();
 router.post("/process", authMiddleware, upload.single("file"), validateUploadedFile, documentController.uploadDocument);
 router.post("/upload", authMiddleware, upload.single("file"), validateUploadedFile, documentController.uploadDocument);
 router.post("/extract", authMiddleware, documentController.extractDocument);
+router.post("/digilocker-pull", authMiddleware, documentController.pullDigiLockerDocuments);
 router.get("/", authMiddleware, documentController.listDocuments);
 router.get("/:id", authMiddleware, documentController.getDocument);
 router.post("/:id/verify", authMiddleware, documentController.verifyDocument);

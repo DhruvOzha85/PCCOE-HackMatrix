@@ -1,65 +1,106 @@
 /**
- * DOM Translation Engine powered by Google Translation API
- * Traverses DOM text nodes, preserves original English text, and dynamically
- * replaces content across all views, modals, cards, and navigation.
+ * Dynamic DOM Translation Engine powered by Google Translation API
+ * 
+ * Dynamically traverses the entire DOM, collects all live text nodes & placeholders,
+ * batches them to Google Translate via fast HTTP POST, and replaces all text
+ * dynamically across the application within 2-4 seconds.
+ * 
+ * Zero static dictionaries — 100% dynamic Google Translation.
  */
 
-// Memory cache of translations: { [langCode]: { [originalText]: translatedText } }
-const translationMemoryCache = {};
+// Memory cache: { [langCode]: { [origText]: translatedText } }
+const memoryCache = {};
 
-// Load cached translations from storage
-function loadStoredCache(langCode) {
-  if (translationMemoryCache[langCode]) {
-    return translationMemoryCache[langCode];
-  }
-  try {
-    const raw = sessionStorage.getItem(`fin_trans_cache_${langCode}`);
-    if (raw) {
-      translationMemoryCache[langCode] = JSON.parse(raw);
-      return translationMemoryCache[langCode];
-    }
-  } catch (e) {
-    // Ignore storage parse issues
-  }
-  translationMemoryCache[langCode] = {};
-  return translationMemoryCache[langCode];
-}
-
-// Save cached translations to storage
-function saveStoredCache(langCode) {
-  try {
-    if (translationMemoryCache[langCode]) {
-      sessionStorage.setItem(
-        `fin_trans_cache_${langCode}`,
-        JSON.stringify(translationMemoryCache[langCode])
-      );
-    }
-  } catch (e) {
-    // Ignore quota issues
-  }
-}
-
-// Active observer reference
-let domObserver = null;
+// Active translation state
 let currentLanguage = 'en';
-let isTranslating = false;
+let domObserver = null;
 let debounceTimer = null;
+let isTranslating = false;
+
+// Variants of "FIN" in Indian languages that Google sometimes generates
+const FORBIDDEN_BRAND_VARIANTS = [
+  'पंख',
+  'फिन',
+  'पंखा',
+  'પાંખ',
+  'செட்டை',
+  'రెక్క',
+  'ডানা',
+  'ರೆಕ್ಕೆ',
+  'ചിറക്',
+  'ਖੰਭ',
+  'پر',
+  'ଡେଣା',
+  'পাখিৰ ডেউকা',
+];
 
 /**
- * Checks if a string is eligible for translation
+ * Loads cached translations from localStorage
+ */
+function loadLanguageCache(langCode) {
+  if (memoryCache[langCode]) {
+    return memoryCache[langCode];
+  }
+
+  const cache = {};
+  try {
+    const raw = localStorage.getItem(`fin_google_trans_${langCode}`);
+    if (raw) {
+      Object.assign(cache, JSON.parse(raw));
+    }
+  } catch (_) {
+    // Ignore storage parse issues
+  }
+
+  memoryCache[langCode] = cache;
+  return cache;
+}
+
+/**
+ * Saves cache to localStorage
+ */
+function saveLanguageCache(langCode) {
+  try {
+    if (memoryCache[langCode]) {
+      localStorage.setItem(
+        `fin_google_trans_${langCode}`,
+        JSON.stringify(memoryCache[langCode])
+      );
+    }
+  } catch (_) {
+    // Ignore storage quota issues
+  }
+}
+
+/**
+ * Strictly protects the portal brand "FIN"
+ */
+function sanitizeBrandName(text) {
+  if (!text || typeof text !== 'string') return text;
+  let result = text;
+  for (const variant of FORBIDDEN_BRAND_VARIANTS) {
+    if (result.includes(variant)) {
+      result = result.replace(new RegExp(variant, 'g'), 'FIN');
+    }
+  }
+  return result;
+}
+
+/**
+ * Checks if a string should be translated
  */
 function shouldTranslateText(text) {
   if (!text || typeof text !== 'string') return false;
   const trimmed = text.trim();
   if (trimmed.length < 2) return false;
 
-  // Never translate the portal brand name FIN or FIN-03
-  if (trimmed.toUpperCase() === 'FIN' || trimmed === 'FIN-03') {
+  // Never translate the portal brand FIN or FIN IDs
+  if (trimmed.toUpperCase() === 'FIN' || trimmed === 'FIN-03' || /^FIN-\d+$/i.test(trimmed)) {
     return false;
   }
 
-  // Skip purely numeric or single symbol strings (e.g. "₹", "0", "123", "/", "-")
-  if (/^[\d\s.,/\\+\-₹$%:;!@#&*()—_]+$/.test(trimmed)) {
+  // Skip purely numeric or punctuation strings (e.g. "₹ 1,500", "0", "12/05/2024", "/", "-")
+  if (/^[\d\s.,/\\+\-₹$%:;!@#&*()—_|[\]{}<>]+$/.test(trimmed)) {
     return false;
   }
 
@@ -67,7 +108,7 @@ function shouldTranslateText(text) {
 }
 
 /**
- * Checks if an element should be ignored from translation
+ * Checks if a DOM element should be excluded
  */
 function isIgnoredElement(el) {
   if (!el || !el.tagName) return false;
@@ -79,7 +120,8 @@ function isIgnoredElement(el) {
     el.classList.contains('notranslate') ||
     el.classList.contains('fin-brand-hero-title') ||
     el.classList.contains('signup-logo-text') ||
-    el.classList.contains('footer-brand-title')
+    el.classList.contains('footer-brand-title') ||
+    el.classList.contains('language-selector-wrapper')
   )) {
     return true;
   }
@@ -89,10 +131,7 @@ function isIgnoredElement(el) {
   if (el.closest && (
     el.closest('.notranslate') ||
     el.closest('[translate="no"]') ||
-    el.closest('.fin-brand-hero-title') ||
-    el.closest('.signup-logo-text') ||
-    el.closest('.footer-brand-title') ||
-    el.closest('.fin-brand-top-row')
+    el.closest('.language-selector-wrapper')
   )) {
     return true;
   }
@@ -100,55 +139,76 @@ function isIgnoredElement(el) {
 }
 
 /**
- * Fetch batch translations from the backend Google Translate endpoint
+ * Fetches translations dynamically from backend Google Translate endpoint
  */
-async function fetchBatchTranslations(texts, targetLang) {
+async function fetchDynamicBatchTranslations(texts, targetLang) {
   if (!texts || texts.length === 0 || targetLang === 'en') return {};
+
+  const needed = Array.from(new Set(texts));
+  const results = {};
 
   try {
     const res = await fetch('/api/translate/batch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ texts, targetLang, sourceLang: 'en' }),
+      body: JSON.stringify({ texts: needed, targetLang, sourceLang: 'en' }),
     });
 
     if (res.ok) {
       const data = await res.json();
-      return data.translations || {};
+      if (data && data.translations) {
+        for (const [k, v] of Object.entries(data.translations)) {
+          results[k] = sanitizeBrandName(v);
+        }
+        return results;
+      }
     }
   } catch (err) {
-    console.warn('Backend translation proxy failed, using direct client fallback:', err);
+    console.warn('Backend translation call notice, falling back:', err);
   }
 
-  // Fallback: direct Google Translate API call if backend proxy is unavailable
-  const fallbackResults = {};
-  for (const str of texts) {
+  // Fallback: direct Google Translate batch with delimiter
+  const DELIMITER = ' ||| ';
+  const CHUNK_SIZE = 25;
+  for (let i = 0; i < needed.length; i += CHUNK_SIZE) {
+    const chunk = needed.slice(i, i + CHUNK_SIZE);
     try {
-      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(str)}`;
-      const directRes = await fetch(url);
-      if (directRes.ok) {
-        const parsed = await directRes.json();
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(chunk.join(DELIMITER))}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const parsed = await res.json();
         if (Array.isArray(parsed) && Array.isArray(parsed[0])) {
-          fallbackResults[str] = parsed[0].map((item) => item[0]).join('');
+          const joinedTrans = parsed[0].map((item) => item[0]).join('');
+          const split = joinedTrans.split(/\s*\|\|\|\s*/);
+          if (split.length === chunk.length) {
+            chunk.forEach((orig, idx) => {
+              results[orig] = sanitizeBrandName(split[idx] ? split[idx].trim() : orig);
+            });
+            continue;
+          }
         }
       }
-    } catch (_) {
-      // Fallback silently skips
-    }
+    } catch (_) {}
+
+    chunk.forEach((s) => { results[s] = s; });
   }
-  return fallbackResults;
+
+  return results;
 }
 
 /**
- * Restores original English text across the entire DOM
+ * Restores original English text across the entire DOM instantly
  */
 export function restoreOriginalDom() {
   currentLanguage = 'en';
+
   if (domObserver) {
     domObserver.disconnect();
   }
 
   const root = document.getElementById('root') || document.body;
+  if (!root) return;
+
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
 
   let node;
@@ -171,7 +231,8 @@ export function restoreOriginalDom() {
 }
 
 /**
- * Traverses the DOM, collects English text nodes, and applies Google translations
+ * Traverses the entire DOM tree, fetches every text node & placeholder,
+ * and updates them dynamically using Google Translation API.
  */
 export async function translateDom(targetLang) {
   if (!targetLang || targetLang === 'en') {
@@ -180,18 +241,21 @@ export async function translateDom(targetLang) {
   }
 
   currentLanguage = targetLang;
-  const langCache = loadStoredCache(targetLang);
+  const langCache = loadLanguageCache(targetLang);
 
   if (isTranslating) return;
   isTranslating = true;
 
-  // Pause observer while making DOM edits
+  // Disconnect observer during translation pass
   if (domObserver) {
     domObserver.disconnect();
   }
 
   try {
     const root = document.getElementById('root') || document.body;
+    if (!root) return;
+
+    // Traverse ALL text nodes across the entire page
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode(node) {
         if (!node.parentElement || isIgnoredElement(node.parentElement)) {
@@ -205,16 +269,16 @@ export async function translateDom(targetLang) {
     });
 
     const pendingStrings = new Set();
-    const nodeMapping = []; // Array of { node, origStr, cleanStr }
+    const nodeMapping = []; // Array of { node, orig, clean }
 
     let node;
     while ((node = walker.nextNode())) {
-      // Save original text on first encounter
+      // Preserve original English text on first encounter
       if (node.__finOriginalText === undefined) {
         node.__finOriginalText = node.nodeValue;
       }
 
-      // If already translated to this language, skip
+      // If already translated to targetLang, skip
       if (node.__finCurrentLang === targetLang) {
         continue;
       }
@@ -228,13 +292,16 @@ export async function translateDom(targetLang) {
 
       nodeMapping.push({ node, orig, clean });
 
-      // If not in cache, queue for translation
-      if (!langCache[clean]) {
+      if (langCache[clean]) {
+        // Instant cache hit
+        node.nodeValue = orig.replace(clean, langCache[clean]);
+        node.__finCurrentLang = targetLang;
+      } else {
         pendingStrings.add(clean);
       }
     }
 
-    // Also collect placeholders on input/textarea
+    // Traverse all inputs & textareas for placeholders
     const phInputs = document.querySelectorAll('input[placeholder], textarea[placeholder]');
     const phMapping = [];
     phInputs.forEach((input) => {
@@ -245,47 +312,48 @@ export async function translateDom(targetLang) {
       const origPh = input.getAttribute('data-fin-original-ph').trim();
       if (shouldTranslateText(origPh)) {
         phMapping.push({ input, origPh });
-        if (!langCache[origPh]) {
+        if (langCache[origPh]) {
+          input.placeholder = langCache[origPh];
+        } else {
           pendingStrings.add(origPh);
         }
       }
     });
 
-    // Fetch translations for any newly seen strings
+    // If there are uncached strings, fetch them via Google Translate batch
     if (pendingStrings.size > 0) {
       const textsToFetch = Array.from(pendingStrings);
-      const fetched = await fetchBatchTranslations(textsToFetch, targetLang);
+      const fetched = await fetchDynamicBatchTranslations(textsToFetch, targetLang);
+
+      // Merge into cache and save to localStorage
       Object.assign(langCache, fetched);
-      saveStoredCache(targetLang);
-    }
+      saveLanguageCache(targetLang);
 
-    // Apply translations to DOM text nodes
-    for (const { node, orig, clean } of nodeMapping) {
-      const translated = langCache[clean];
-      if (translated) {
-        node.nodeValue = orig.replace(clean, translated);
-        node.__finCurrentLang = targetLang;
+      // Apply to text nodes
+      for (const { node, orig, clean } of nodeMapping) {
+        if (node.__finCurrentLang !== targetLang && langCache[clean]) {
+          node.nodeValue = orig.replace(clean, langCache[clean]);
+          node.__finCurrentLang = targetLang;
+        }
       }
-    }
 
-    // Apply translations to placeholders
-    for (const { input, origPh } of phMapping) {
-      const translatedPh = langCache[origPh];
-      if (translatedPh) {
-        input.placeholder = translatedPh;
+      // Apply to placeholders
+      for (const { input, origPh } of phMapping) {
+        if (langCache[origPh]) {
+          input.placeholder = langCache[origPh];
+        }
       }
     }
   } catch (err) {
-    console.error('Error during DOM translation:', err);
+    console.error('Error during dynamic DOM translation:', err);
   } finally {
     isTranslating = false;
-    // Re-attach observer for dynamic SPA re-renders
     setupDomObserver();
   }
 }
 
 /**
- * Mutation observer to translate new elements rendered by React
+ * Mutation observer to dynamically translate new elements rendered by React
  */
 function setupDomObserver() {
   if (currentLanguage === 'en') return;
@@ -299,7 +367,7 @@ function setupDomObserver() {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       translateDom(currentLanguage);
-    }, 140);
+    }, 180);
   });
 
   domObserver.observe(root, {
@@ -315,9 +383,8 @@ function setupDomObserver() {
 export function initDomTranslation() {
   const saved = localStorage.getItem('fin_user_language') || 'en';
   if (saved && saved !== 'en') {
-    // Wait for initial render to settle
     setTimeout(() => {
       translateDom(saved);
-    }, 250);
+    }, 200);
   }
 }
