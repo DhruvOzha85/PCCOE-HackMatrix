@@ -88,8 +88,8 @@ export function mapBackendApplication(bApp) {
     : 'Unlinked Scheme Record';
 
   // Financial Integrity
-  let benefitAmount = 'Not specified';
-  let benefitSubtitle = isAvailable ? 'Supported Benefit' : 'Benefit Information Unavailable';
+  let benefitAmount;
+  let benefitSubtitle;
   const benefitNum = typeof bApp.benefit_numeric === 'number'
     ? bApp.benefit_numeric
     : (bApp.estimated_benefit && bApp.estimated_benefit !== 175000 ? Number(bApp.estimated_benefit) : 0);

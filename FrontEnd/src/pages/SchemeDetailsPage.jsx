@@ -170,12 +170,18 @@ export default function SchemeDetailsPage({ defaultTab, schemeIdProp }) {
     }
   }, [activeTab, scheme, eligibilityResult, isCheckingEligibility, runEligibilityCheck]);
 
-  // FAQ state
+  // FAQ and Modal state
   const [faqs, setFaqs] = useState([]);
   const [isFaqsLoading, setIsFaqsLoading] = useState(false);
   const [faqsError, setFaqsError] = useState(null);
   const [faqsLoaded, setFaqsLoaded] = useState(false);
   const [expandedFaqIndex, setExpandedFaqIndex] = useState(null);
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [downloadNotice, setDownloadNotice] = useState(null);
+  const [copyToast, setCopyToast] = useState(false);
+  const [expandedStep, setExpandedStep] = useState(null);
 
   // Reset all scheme-scoped state when scheme changes to eliminate cross-scheme state leakage
   useEffect(() => {
@@ -236,12 +242,7 @@ export default function SchemeDetailsPage({ defaultTab, schemeIdProp }) {
     }
   }, [schemeId, scheme?.id]);
 
-  const [showApplyModal, setShowApplyModal] = useState(false);
-  const [showHelpModal, setShowHelpModal] = useState(false);
-  const [downloadSuccess, setDownloadSuccess] = useState(false);
-  const [downloadNotice, setDownloadNotice] = useState(null);
-  const [copyToast, setCopyToast] = useState(false);
-  const [expandedStep, setExpandedStep] = useState(null);
+
 
   const matchScore = scheme?.matchScore != null ? scheme.matchScore : null;
   const relevanceScore = scheme?.relevanceScore != null ? scheme.relevanceScore : null;

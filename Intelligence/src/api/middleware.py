@@ -139,7 +139,7 @@ class InMemoryRateLimiter:
         p = path.lower()
         if p.startswith("/v1/documents") or p.startswith("/v1/applications") or p.startswith("/v1/chat") or p.startswith("/v1/policy/sync") or p.startswith("/v1/policy/rollback"):
             return RateLimitTier.EXPENSIVE
-        elif p.startswith("/health/live"):
+        elif p.startswith("/health/live") or p.startswith("/health/cron"):
             return RateLimitTier.PUBLIC
         return RateLimitTier.PROTECTED
 

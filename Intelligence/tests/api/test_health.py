@@ -23,6 +23,16 @@ class TestHealthEndpoints(unittest.TestCase):
         self.assertEqual(data["status"], "ok")
         self.assertEqual(data["service"], "fin-ai")
 
+    def test_cron_health_endpoint_is_public(self):
+        """GET /health/cron must return 200 OK with minimal status: ok, service: fin-ai without auth."""
+        response = self.client.get("/health/cron")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.headers["content-type"].startswith("application/json"))
+        data = response.json()
+        self.assertEqual(data, {"status": "ok", "service": "fin-ai"})
+        self.assertEqual(len(data), 2)
+        self.assertLess(len(response.content), 100)
+
     def test_ready_endpoint_requires_auth(self):
         """GET /health/ready must reject unauthenticated requests with 401."""
         response = self.client.get("/health/ready")

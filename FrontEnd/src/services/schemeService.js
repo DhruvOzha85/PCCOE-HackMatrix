@@ -1,6 +1,5 @@
 import { authenticatedFetch, safeApiFetch } from './authService.js';
-
-const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) || 'http://localhost:5000';
+import { API_BASE_URL as API_BASE } from '../config/apiConfig';
 
 /**
  * Fetch scheme stats & live category counts from the backend database
