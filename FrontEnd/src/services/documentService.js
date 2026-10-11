@@ -103,3 +103,24 @@ export async function getDocumentDetails(documentId) {
   return json?.data || null;
 }
 
+/**
+ * 1-Click DigiLocker Direct Pull (MeitY India Stack Integration)
+ */
+export async function pullDigiLockerDocuments(selectedDocs = ['aadhaar', 'income_cert', 'labour_card', 'caste_cert', 'bank_passbook']) {
+  const res = await authenticatedFetch(`${API_BASE}/api/documents/digilocker-pull`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ selectedDocs })
+  });
+
+  if (!res.ok) {
+    const errJson = await res.json().catch(() => ({}));
+    const error = new Error(errJson.message || `DigiLocker sync failed (${res.status})`);
+    error.status = res.status;
+    throw error;
+  }
+
+  const json = await res.json();
+  return json?.data || [];
+}
+

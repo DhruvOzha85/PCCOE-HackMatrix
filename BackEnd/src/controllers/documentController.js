@@ -93,11 +93,30 @@ const verifyDocument = async (req, res, next) => {
     }
 };
 
+const pullDigiLockerDocuments = async (req, res, next) => {
+    try {
+        const { selectedDocs } = req.body;
+        const result = await documentServices.pullDigiLockerDocuments({
+            userId: req.user.id,
+            selectedDocs
+        });
+        res.json({
+            success: true,
+            message: "Documents successfully pulled and verified via DigiLocker (MeitY)",
+            count: result.length,
+            data: result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     uploadDocument,
     extractDocument,
     listDocuments,
     getDocument,
     deleteDocument,
-    verifyDocument
+    verifyDocument,
+    pullDigiLockerDocuments
 };

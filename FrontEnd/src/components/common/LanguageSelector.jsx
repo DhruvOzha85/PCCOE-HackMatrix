@@ -63,11 +63,13 @@ export default function LanguageSelector() {
     setIsTranslating(true);
     syncGoogleCombo(langCode);
 
-    if (langCode === 'en') {
-      restoreOriginalDom();
-      setIsTranslating(false);
-    } else {
-      await translateDom(langCode);
+    try {
+      if (langCode === 'en') {
+        restoreOriginalDom();
+      } else {
+        await translateDom(langCode);
+      }
+    } finally {
       setIsTranslating(false);
     }
   };
@@ -92,7 +94,7 @@ export default function LanguageSelector() {
     if (currentLang && currentLang !== 'en') {
       const timeout = setTimeout(() => {
         translateDom(currentLang);
-      }, 150);
+      }, 50);
       return () => clearTimeout(timeout);
     }
   }, [location.pathname, currentLang]);

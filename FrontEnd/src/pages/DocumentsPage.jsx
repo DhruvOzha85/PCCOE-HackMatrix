@@ -43,6 +43,7 @@ import {
 import PageContainer from '../components/layout/PageContainer';
 import SchemeReadinessCombobox from '../components/documents/SchemeReadinessCombobox';
 import ContextualHelp from '../components/help/ContextualHelp';
+import DigiLockerPullModal from '../components/documents/DigiLockerPullModal';
 import {
   buildDynamicSchemeChecklist,
   normalizeDocRequirementId,
@@ -369,6 +370,7 @@ export default function DocumentsPage() {
   const [selectedDocForView, setSelectedDocForView] = useState(null);
   const [selectedTicketForView, setSelectedTicketForView] = useState(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isDigiLockerModalOpen, setIsDigiLockerModalOpen] = useState(false);
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [isDossierModalOpen, setIsDossierModalOpen] = useState(false);
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
@@ -1410,6 +1412,19 @@ export default function DocumentsPage() {
               )}
             </div>
 
+            {/* 1-Click DigiLocker Direct Pull Button */}
+            <button
+              type="button"
+              className="btn-digilocker-pull notranslate"
+              onClick={() => setIsDigiLockerModalOpen(true)}
+              title="Fetch and verify authentic certificates from DigiLocker (MeitY)"
+              translate="no"
+            >
+              <ShieldCheck size={15} />
+              <span>Pull from DigiLocker</span>
+              <span style={{ background: '#087443', color: '#FFFFFF', fontSize: '9.5px', fontWeight: 700, padding: '1px 5px', borderRadius: '4px' }}>DPI</span>
+            </button>
+
             <button
               type="button"
               className="btn-export-dossier"
@@ -1540,15 +1555,27 @@ export default function DocumentsPage() {
                     <p style={{ fontSize: '13.5px', color: '#475467', maxWidth: '420px', margin: '0 auto 20px', lineHeight: 1.5 }}>
                       Upload your Aadhaar, PAN, Income or Category certificates to automatically verify eligibility across government schemes.
                     </p>
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      onClick={() => handleOpenUploadModal('aadhaar')}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-                    >
-                      <Plus size={16} />
-                      <span>Upload Your First Document</span>
-                    </button>
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        className="btn-digilocker-pull notranslate"
+                        onClick={() => setIsDigiLockerModalOpen(true)}
+                        style={{ height: '42px', padding: '0 20px', fontSize: '13.5px' }}
+                        translate="no"
+                      >
+                        <ShieldCheck size={16} />
+                        <span>⚡ 1-Click Pull from DigiLocker (All Documents)</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        onClick={() => handleOpenUploadModal('aadhaar')}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                      >
+                        <Plus size={16} />
+                        <span>Upload Manually</span>
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <table className="docs-table" aria-label="Applicant Documents Table">
@@ -3321,6 +3348,18 @@ export default function DocumentsPage() {
             </div>
           </div>
         )}
+
+        {/* 1-Click DigiLocker Direct Pull Modal (India Stack DPI Integration) */}
+        <DigiLockerPullModal
+          isOpen={isDigiLockerModalOpen}
+          onClose={() => setIsDigiLockerModalOpen(false)}
+          onSuccess={async () => {
+            await loadDocuments();
+            triggerToast('🎉 Official documents successfully synced and verified via DigiLocker!');
+          }}
+          userName={policyFullName || storedUser.fullName || storedUser.name || 'Mahi Patel'}
+          userState={applicantState || policyState || storedUser.state || 'Gujarat'}
+        />
 
         {/* Floating Portal Action Menu (Completely escapes table clipping and viewport edges) */}
         {activeMenu && activeMenu.doc && menuPlacement && typeof document !== 'undefined' && createPortal(
