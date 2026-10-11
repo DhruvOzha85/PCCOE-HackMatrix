@@ -89,8 +89,16 @@ export default function LanguageSelector() {
     await applyLanguage(langCode);
   };
 
-  // Re-apply translation upon SPA route transitions
+  // Re-apply translation upon SPA route transitions (skip standalone auth pages: signin & register)
   useEffect(() => {
+    const isAuthRoute =
+      location.pathname === '/login' ||
+      location.pathname === '/signin' ||
+      location.pathname === '/signup' ||
+      location.pathname === '/register';
+
+    if (isAuthRoute) return;
+
     if (currentLang && currentLang !== 'en') {
       const timeout = setTimeout(() => {
         translateDom(currentLang);

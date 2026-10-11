@@ -6,6 +6,8 @@ Defines a pluggable interface for dense embeddings supporting production Sentenc
 
 from abc import ABC, abstractmethod
 import hashlib
+import logging
+import os
 from typing import List, Optional
 import numpy as np
 
@@ -23,6 +25,8 @@ try:
     from .config import RAGConfig, DEFAULT_RAG_CONFIG
 except (ImportError, ValueError):
     from src.rag.config import RAGConfig, DEFAULT_RAG_CONFIG
+
+logger = logging.getLogger("fin.rag.embeddings")
 
 
 class EmbeddingModel(ABC):
@@ -54,7 +58,8 @@ class EmbeddingModel(ABC):
 class SentenceTransformerEmbeddingModel(EmbeddingModel):
     """
     Production embedding model leveraging sentence-transformers (e.g. BAAI/bge-m3).
-    Supports multilingual English/Hindi queries.
+    Supports multilingual English/Hindi queries with automatic graceful degradation
+    to deterministic offline embeddings if model loading fails or weights are absent.
     """
 
     def __init__(
@@ -67,20 +72,25 @@ class SentenceTransformerEmbeddingModel(EmbeddingModel):
         self._dimension = dimension
         self._normalize = normalize
         self._model = None
+        self._fallback = None
 
     def _load_model(self):
-        if self._model is None:
-            try:
-                from sentence_transformers import SentenceTransformer
-                self._model = SentenceTransformer(self._model_name)
-                # Introspect dimension from actual model if loaded
-                sample_emb = self._model.encode("test", convert_to_numpy=True)
-                self._dimension = int(sample_emb.shape[-1])
-            except Exception as e:
-                raise RuntimeError(
-                    f"Failed to load sentence-transformers model '{self._model_name}': {e}. "
-                    "Ensure internet connection or pre-downloaded weights are present."
-                )
+        if self._model is not None or self._fallback is not None:
+            return
+        try:
+            from sentence_transformers import SentenceTransformer
+            logger.info("Loading sentence-transformers embedding model: %s", self._model_name)
+            self._model = SentenceTransformer(self._model_name)
+            sample_emb = self._model.encode("test", convert_to_numpy=True)
+            self._dimension = int(sample_emb.shape[-1])
+            logger.info("Embedding model %s loaded successfully (dimension=%d)", self._model_name, self._dimension)
+        except Exception as e:
+            logger.warning(
+                "Could not load sentence-transformers model '%s' (%s). "
+                "Degrading gracefully to DeterministicMockEmbeddingModel.",
+                self._model_name, e
+            )
+            self._fallback = DeterministicMockEmbeddingModel(dimension=self._dimension)
 
     @property
     def dimension(self) -> int:
@@ -92,8 +102,8 @@ class SentenceTransformerEmbeddingModel(EmbeddingModel):
 
     def encode_documents(self, texts: List[str], batch_size: int = 64) -> np.ndarray:
         self._load_model()
-        if self._model is None:
-            raise RuntimeError(f"Model {self._model_name} failed to initialize.")
+        if self._fallback is not None:
+            return self._fallback.encode_documents(texts, batch_size=batch_size)
         if not texts:
             return np.empty((0, self._dimension), dtype=np.float32)
 
@@ -108,8 +118,8 @@ class SentenceTransformerEmbeddingModel(EmbeddingModel):
 
     def encode_query(self, query: str) -> np.ndarray:
         self._load_model()
-        if self._model is None:
-            raise RuntimeError(f"Model {self._model_name} failed to initialize.")
+        if self._fallback is not None:
+            return self._fallback.encode_query(query)
         if not query.strip():
             return np.zeros(self._dimension, dtype=np.float32)
 
@@ -173,7 +183,16 @@ def get_embedding_model(
     force_mock: bool = False
 ) -> EmbeddingModel:
     """Factory creating configured embedding model."""
-    if force_mock:
+    use_mock = (
+        force_mock
+        or getattr(config, "use_mock_embeddings", False)
+        or os.getenv("USE_MOCK_EMBEDDINGS", "false").strip().lower() in ("true", "1", "yes")
+    )
+    if use_mock:
+        logger.info(
+            "Initializing DeterministicMockEmbeddingModel (dimension=%d) per USE_MOCK_EMBEDDINGS configuration.",
+            config.embedding_dimension
+        )
         return DeterministicMockEmbeddingModel(dimension=config.embedding_dimension)
     try:
         return SentenceTransformerEmbeddingModel(
@@ -181,6 +200,6 @@ def get_embedding_model(
             dimension=config.embedding_dimension,
             normalize=config.normalize_embeddings
         )
-    except Exception:
-        # Fallback to deterministic mock if offline or weights not downloaded
+    except Exception as e:
+        logger.warning("Failed to initialize SentenceTransformerEmbeddingModel (%s); falling back to DeterministicMockEmbeddingModel", e)
         return DeterministicMockEmbeddingModel(dimension=config.embedding_dimension)

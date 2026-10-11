@@ -16,7 +16,7 @@ import {
   FileText,
 } from 'lucide-react';
 import '../styles/signup.css';
-import LanguageSelector from '../components/common/LanguageSelector';
+import { restoreOriginalDom } from '../utils/domTranslator';
 import {
   registerUser,
   loginUser,
@@ -71,6 +71,11 @@ export default function SignupPage({ initialMode = 'signup' }) {
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
   const [countrySearch, setCountrySearch] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Ensure Sign In & Register pages remain in clean original English
+  useEffect(() => {
+    restoreOriginalDom();
+  }, []);
 
   // Modals: null | 'terms' | 'privacy' | 'forgot'
   const [activeModal, setActiveModal] = useState(null);
@@ -307,7 +312,7 @@ export default function SignupPage({ initialMode = 'signup' }) {
   };
 
   return (
-    <div className="signup-viewport">
+    <div className="signup-viewport notranslate" translate="no" lang="en">
       {/* Background Atmosphere Layers */}
       <div className="signup-bg-gradient" aria-hidden="true" />
 
@@ -431,7 +436,6 @@ export default function SignupPage({ initialMode = 'signup' }) {
         </Link>
 
         <div className="signup-nav-right">
-          <LanguageSelector />
           <span>
             {isSignIn ? "Don't have an account?" : 'Already have an account?'}
           </span>

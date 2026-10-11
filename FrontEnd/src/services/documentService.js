@@ -1,6 +1,5 @@
 import { authenticatedFetch } from './authService';
-
-const API_BASE = (import.meta.env.VITE_API_URL || 'https://pccoe-hackmatrix-backend.onrender.com').replace(/\/+$/, '');
+import { API_BASE_URL as API_BASE } from '../config/apiConfig';
 
 /**
  * Fetch list of uploaded documents

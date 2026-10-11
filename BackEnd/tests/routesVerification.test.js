@@ -23,6 +23,7 @@ describe('22 Backend Routes Mounted & Verification Tests', () => {
 
     const routesToCheck = [
         { method: 'GET', path: '/', expectedStatus: [200] },
+        { method: 'GET', path: '/health/cron', expectedStatus: [200] },
         { method: 'POST', path: '/api/users/register', expectedStatus: [400, 422] },
         { method: 'POST', path: '/api/users/login', expectedStatus: [400, 422] },
         { method: 'POST', path: '/api/users/refresh', expectedStatus: [400, 401] },
@@ -46,8 +47,8 @@ describe('22 Backend Routes Mounted & Verification Tests', () => {
         { method: 'POST', path: '/api/applications/analyze', expectedStatus: [401] }
     ];
 
-    test('All 22 Backend routes are mounted and not returning 404 (Route not found)', async () => {
-        assert.strictEqual(routesToCheck.length, 22, 'Must test exactly 22 documented routes');
+    test('All 23 Backend routes are mounted and not returning 404 (Route not found)', async () => {
+        assert.strictEqual(routesToCheck.length, 23, 'Must test exactly 23 documented routes');
 
         for (const route of routesToCheck) {
             const res = await fetch(`${baseUrl}${route.path}`, {
@@ -70,5 +71,50 @@ describe('22 Backend Routes Mounted & Verification Tests', () => {
                 `Route ${route.method} ${route.path} returned unexpected status ${res.status}. Expected one of: ${route.expectedStatus.join(', ')}`
             );
         }
+    });
+
+    test('POST /api/users/login route is canonically mounted and handles auth validation', async () => {
+        const res = await fetch(`${baseUrl}/api/users/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+
+        const body = await res.json();
+        assert.strictEqual(res.status, 400, 'Empty login body must return HTTP 400 Bad Request');
+        assert.strictEqual(body.success, false);
+        assert.ok(
+            body.message.includes('Email and password are required'),
+            `Expected validation message, got: ${body.message}`
+        );
+    });
+
+    test('POST /api/api/users/login gracefully normalizes duplicate /api prefix and reaches login route', async () => {
+        const res = await fetch(`${baseUrl}/api/api/users/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+
+        const body = await res.json();
+        assert.notStrictEqual(res.status, 404, 'Must not return 404 Route not found for /api/api/users/login');
+        assert.strictEqual(res.status, 400, 'Normalized endpoint must execute loginUser validation and return 400');
+        assert.strictEqual(body.success, false);
+        assert.ok(body.message.includes('Email and password are required'));
+    });
+
+    test('GET /health/cron returns HTTP 200 with minimal { "status": "ok" } JSON', async () => {
+        const res = await fetch(`${baseUrl}/health/cron`);
+        assert.strictEqual(res.status, 200, 'Health cron endpoint must return HTTP 200');
+
+        const contentType = res.headers.get('content-type') || '';
+        assert.ok(contentType.includes('application/json'), `Expected application/json, got ${contentType}`);
+
+        const text = await res.text();
+        assert.ok(text.length < 100, `Health cron response must be minimal, got length: ${text.length}`);
+
+        const body = JSON.parse(text);
+        assert.deepStrictEqual(body, { status: 'ok' }, 'Response must be strictly { status: "ok" }');
+        assert.strictEqual(Object.keys(body).length, 1, 'Response must contain only the status key');
     });
 });

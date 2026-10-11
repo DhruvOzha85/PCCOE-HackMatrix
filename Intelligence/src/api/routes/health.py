@@ -29,6 +29,17 @@ def get_liveness() -> HealthResponse:
 
 
 @router.get(
+    "/health/cron",
+    response_model=HealthResponse,
+    summary="Cron Health Check Endpoint",
+    description="Lightweight, non-blocking public health probe returning minimal status for uptime pingers and cron jobs.",
+)
+def get_cron_health() -> HealthResponse:
+    """Returns 200 OK with minimal status. Public, fast, and does not invoke models, databases, or LLMs."""
+    return HealthResponse(status="ok", service="fin-ai")
+
+
+@router.get(
     "/health/ready",
     response_model=ReadinessResponse,
     summary="Service Readiness Probe",

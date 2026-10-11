@@ -70,24 +70,31 @@ export default function Header({
       if (stored) {
         const parsed = JSON.parse(stored);
         const resolved = resolveDisplayName(parsed, parsed?.email);
-        const fullName = (resolved || parsed?.fullName || parsed?.name || 'Citizen').trim();
+        const storedRole = getStoredRole();
+        const isReviewer = storedRole === 'reviewer' || parsed?.role === 'reviewer';
+        const fullName = (resolved || parsed?.fullName || parsed?.name || (isReviewer ? 'Govt Reviewer Officer' : 'Citizen')).trim();
         const parts = fullName.split(' ').filter(Boolean);
-        const initials = fullName.length >= 2 ? fullName.substring(0, 2).toUpperCase() : (fullName ? fullName.toUpperCase() : 'CI');
-        const name = parts[0] || fullName;
+        const initials = isReviewer && (!parsed?.fullName || parsed?.fullName === 'Reviewer')
+          ? 'GO'
+          : (fullName.length >= 2 ? fullName.substring(0, 2).toUpperCase() : (fullName ? fullName.toUpperCase() : 'GO'));
+        const name = isReviewer && (!resolved || resolved === 'Citizen' || resolved === 'Reviewer') ? 'Govt' : (parts[0] || fullName);
         const avatarUrl = parsed?.avatarUrl || parsed?.avatar_url || '';
-        const role = parsed?.applicantType ? `${parsed.applicantType} Applicant` : 'Individual Applicant';
+        const role = isReviewer
+          ? 'Reviewer Officer'
+          : (parsed?.applicantType ? `${parsed.applicantType} Applicant` : 'Individual Applicant');
         const email = parsed?.email || '';
         const state = parsed?.state || '';
         const strength = calculateProfileStrength(parsed);
         return { name, fullName, initials, avatarUrl, role, email, state, strength };
       }
     } catch (_) {}
+    const defaultIsReviewer = getStoredRole() === 'reviewer';
     return {
-      name: 'Citizen',
-      fullName: 'Citizen',
-      initials: 'CI',
+      name: defaultIsReviewer ? 'Govt' : 'Citizen',
+      fullName: defaultIsReviewer ? 'Govt Reviewer Officer' : 'Citizen',
+      initials: defaultIsReviewer ? 'GO' : 'CI',
       avatarUrl: '',
-      role: 'Individual Applicant',
+      role: defaultIsReviewer ? 'Reviewer Officer' : 'Individual Applicant',
       email: '',
       state: '',
       strength: 0,
@@ -175,12 +182,18 @@ export default function Header({
       try {
         const user = e?.detail || JSON.parse(localStorage.getItem('fin_user') || '{}');
         const resolved = resolveDisplayName(user, user?.email);
-        const fullName = (resolved || user?.fullName || user?.name || 'Citizen').trim();
+        const storedRole = getStoredRole();
+        const isReviewer = storedRole === 'reviewer' || user?.role === 'reviewer';
+        const fullName = (resolved || user?.fullName || user?.name || (isReviewer ? 'Govt Reviewer Officer' : 'Citizen')).trim();
         const parts = fullName.split(' ').filter(Boolean);
-        const initials = fullName.length >= 2 ? fullName.substring(0, 2).toUpperCase() : (fullName ? fullName.toUpperCase() : 'CI');
-        const name = parts[0] || fullName;
+        const initials = isReviewer && (!user?.fullName || user?.fullName === 'Reviewer')
+          ? 'GO'
+          : (fullName.length >= 2 ? fullName.substring(0, 2).toUpperCase() : (fullName ? fullName.toUpperCase() : 'GO'));
+        const name = isReviewer && (!resolved || resolved === 'Citizen' || resolved === 'Reviewer') ? 'Govt' : (parts[0] || fullName);
         const avatarUrl = user?.avatarUrl || user?.avatar_url || '';
-        const role = user?.applicantType ? `${user.applicantType} Applicant` : 'Individual Applicant';
+        const role = isReviewer
+          ? 'Reviewer Officer'
+          : (user?.applicantType ? `${user.applicantType} Applicant` : 'Individual Applicant');
         const email = user?.email || '';
         const state = user?.state || '';
         const strength = calculateProfileStrength(user);
