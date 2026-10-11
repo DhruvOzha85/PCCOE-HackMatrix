@@ -33,6 +33,7 @@ class RAGConfig:
     embedding_dimension: int = 1024
     embedding_batch_size: int = 64
     normalize_embeddings: bool = True
+    use_mock_embeddings: bool = False
 
     # Vector store settings
     use_faiss: bool = True
@@ -46,6 +47,9 @@ class RAGConfig:
     ai_root: Optional[str] = None
 
     def __post_init__(self):
+        import os
+        if os.getenv("USE_MOCK_EMBEDDINGS", "false").strip().lower() in ("true", "1", "yes"):
+            self.use_mock_embeddings = True
         if self.ai_root is None:
             # Resolves AI directory
             self.ai_root = str(Path(__file__).resolve().parents[2])

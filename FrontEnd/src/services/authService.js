@@ -7,13 +7,26 @@
  *   - GET  /api/users/me       : Get current authenticated user profile
  */
 
-const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) || 'http://localhost:5000';
+import { API_BASE_URL as API_BASE } from '../config/apiConfig';
 
 /**
  * Resilient API fetcher with automatic fallback to 127.0.0.1 and Vite dev proxy (/api/...)
  */
 export async function safeApiFetch(endpointOrUrl, options = {}) {
-  const url = endpointOrUrl.startsWith('http') ? endpointOrUrl : `${API_BASE}${endpointOrUrl}`;
+  let url;
+  if (endpointOrUrl.startsWith('http')) {
+    url = endpointOrUrl;
+  } else {
+    const base = (API_BASE || '').replace(/\/+$/, '');
+    const path = endpointOrUrl.startsWith('/') ? endpointOrUrl : `/${endpointOrUrl}`;
+    if (base.endsWith('/api') && path.startsWith('/api/')) {
+      url = `${base}${path.slice(4)}`;
+    } else {
+      url = `${base}${path}`;
+    }
+  }
+  // Sanity check: ensure no accidental double /api/api in URL path
+  url = url.replace(/(https?:\/\/[^/]+)\/api\/api(\/|$)/, '$1/api$2');
   try {
     return await fetch(url, options);
   } catch (err) {

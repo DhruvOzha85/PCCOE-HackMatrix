@@ -19,10 +19,24 @@ const app = express();
 app.use(createCorsMiddleware());
 app.use(express.json());
 
+// Normalize accidental double /api/api prefixes from misconfigured frontend clients
+app.use((req, res, next) => {
+    if (req.url && req.url.startsWith('/api/api/')) {
+        req.url = req.url.replace(/^\/api\/api\//, '/api/');
+    }
+    next();
+});
+
 app.get("/", (req, res) => {
     res.json({
         success: true,
         message: "Backend API is running"
+    });
+});
+
+app.get("/health/cron", (req, res) => {
+    res.status(200).json({
+        status: "ok"
     });
 });
 

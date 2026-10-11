@@ -44,7 +44,7 @@ import startupIndiaImg from '../../assets/schemes/startup_india.jpg';
 import ashokStambhOriginal from '../../assets/ashok_stambh_original.png';
 import tricolorFlagClean from '../../assets/tricolor_flag_clean.png';
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'https://pccoe-hackmatrix-backend.onrender.com').replace(/\/+$/, '');
+import { API_BASE_URL } from '../../config/apiConfig';
 
 // Default prompt suggestions (Matching Image 2 - Left)
 const PROMPTS = [
@@ -306,7 +306,7 @@ export default function FinAssistantModal({
         const cleanSpeech = (text || '')
           .replace(/[*#_`~>[\]()]/g, '')
           .replace(/https?:\/\/\S+/g, '')
-          .replace(/[🏛️📄📎⚠️✅•—]/g, ' ')
+          .replace(/(?:🏛️|📄|📎|⚠️|✅|[•—])/gu, ' ')
           .replace(/\s+/g, ' ')
           .trim();
 

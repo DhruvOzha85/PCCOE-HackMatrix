@@ -5,6 +5,7 @@ import MetricCardsRow from '../components/dashboard/MetricCardsRow';
 import TopOpportunitiesSection from '../components/dashboard/TopOpportunitiesSection';
 import ProfileBanner from '../components/dashboard/ProfileBanner';
 import { authenticatedFetch } from '../services/authService';
+import { getApiUrl } from '../config/apiConfig';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -18,7 +19,7 @@ export default function DashboardPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await authenticatedFetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/dashboard`);
+      const res = await authenticatedFetch(getApiUrl('/api/dashboard'));
       if (!res.ok) {
         throw new Error(`Dashboard request failed (${res.status})`);
       }

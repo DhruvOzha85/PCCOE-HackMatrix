@@ -102,8 +102,8 @@ export function compileDossierPdfBytes(arg1, arg2, arg3) {
   });
   streamText += 'ET';
 
-  const streamBuffer = typeof Buffer !== 'undefined'
-    ? Buffer.from(streamText, 'utf-8')
+  const streamBuffer = typeof globalThis !== 'undefined' && globalThis.Buffer
+    ? globalThis.Buffer.from(streamText, 'utf-8')
     : new TextEncoder().encode(streamText);
   const streamLen = streamBuffer.length;
 
