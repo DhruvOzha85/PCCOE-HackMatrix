@@ -4,40 +4,43 @@ import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
-)
+/**
+ * Accessor for FIN Theme tokens in Composables
+ */
+object FinTheme {
+    val colors: FinCustomColors
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalFinColors.current
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    val shapes: FinCustomShapes
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalFinShapes.current
 
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
-)
+    val typography: Typography
+        @Composable
+        @ReadOnlyComposable
+        get() = MaterialTheme.typography
+}
 
 @Composable
 fun FINTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    // Set to false by default to strictly preserve the FIN governmental brand palette
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -45,14 +48,50 @@ fun FINTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        darkTheme -> FinDarkColorScheme
+        else -> FinLightColorScheme
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    val customColors = if (darkTheme) {
+        FinCustomColors(
+            bgPrimary = FinDarkBgPrimary,
+            surfaceWhite = FinDarkSurface,
+            surfaceSubtle = FinDarkSurfaceSubtle,
+            primaryGreen = FinDarkPrimaryGreen,
+            primaryGreenLight = FinDarkPrimaryGreenLight,
+            textPrimary = FinDarkTextPrimary,
+            textSecondary = FinDarkTextSecondary,
+            textMuted = FinDarkTextMuted,
+            borderSubtle = FinDarkBorderSubtle,
+            borderMedium = FinDarkBorderMedium
+        )
+    } else {
+        FinCustomColors()
+    }
+
+    val customShapes = FinCustomShapes()
+
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as? Activity)?.window
+            if (window != null) {
+                val insetsController = WindowCompat.getInsetsController(window, view)
+                insetsController.isAppearanceLightStatusBars = !darkTheme
+                insetsController.isAppearanceLightNavigationBars = !darkTheme
+            }
+        }
+    }
+
+    CompositionLocalProvider(
+        LocalFinColors provides customColors,
+        LocalFinShapes provides customShapes
+    ) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            shapes = FinMaterialShapes,
+            typography = FinTypography,
+            content = content
+        )
+    }
 }
