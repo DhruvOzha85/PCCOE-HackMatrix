@@ -135,6 +135,49 @@ class SchemeRepositoryTest {
     }
 
     @Test
+    fun testGetSchemeByIdWithWrappedSchemeObject() = runBlocking {
+        val json = """
+            {
+                "success": true,
+                "source": "database",
+                "scheme": {
+                    "id": "whl-181",
+                    "slug": "whl-181",
+                    "title": "Women Helpline",
+                    "brief_description": "24x7 emergency and non-emergency helpline for women.",
+                    "detailed_description": "Provides emergency response through toll-free 181.",
+                    "benefits": "Emergency assistance, psycho-social counselling, and referral services.",
+                    "eligibility": "Any woman in distress.",
+                    "documents_required": [],
+                    "ministry": "Ministry of Women and Child Development",
+                    "level": "Central",
+                    "state": "All India",
+                    "max_benefit": null,
+                    "source_url": "https://www.myscheme.gov.in/schemes/whl-181",
+                    "dbt_scheme": false
+                }
+            }
+        """.trimIndent()
+
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody(json)
+        )
+
+        val result = repository.getSchemeById("whl-181")
+
+        assertTrue(result is NetworkResult.Success)
+        val scheme = (result as NetworkResult.Success).data
+        assertEquals("whl-181", scheme.id)
+        assertEquals("Women Helpline", scheme.displayTitle)
+        assertEquals("Ministry of Women and Child Development", scheme.displayMinistry)
+        assertEquals("Central Scheme", scheme.displayJurisdiction)
+        assertEquals("https://www.myscheme.gov.in/schemes/whl-181", scheme.sourceUrl)
+    }
+
+    @Test
     fun testGetSchemeFaqs() = runBlocking {
         val json = """
             {

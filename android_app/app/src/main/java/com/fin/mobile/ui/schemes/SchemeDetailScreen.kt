@@ -235,9 +235,15 @@ fun SchemeDetailScreen(
                             item {
                                 OverviewTabContent(
                                     scheme = scheme,
-                                    onOpenUrl = { url ->
+                                    onOpenUrl = { rawUrl ->
                                         try {
-                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                            val validUrl = if (!rawUrl.startsWith("http://", ignoreCase = true) &&
+                                                !rawUrl.startsWith("https://", ignoreCase = true)) {
+                                                "https://$rawUrl"
+                                            } else {
+                                                rawUrl
+                                            }
+                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(validUrl))
                                             context.startActivity(intent)
                                         } catch (_: Exception) {
                                             // Prevent crash if URL cannot be handled or is invalid

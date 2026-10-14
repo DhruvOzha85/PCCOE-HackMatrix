@@ -25,6 +25,7 @@ import com.fin.mobile.data.remote.dto.NotificationDto
 import com.fin.mobile.data.remote.dto.NotificationListResponseDto
 import com.fin.mobile.data.remote.dto.RefreshTokenRequestDto
 import com.fin.mobile.data.remote.dto.RegisterRequestDto
+import com.fin.mobile.data.remote.dto.SchemeDetailResponseDto
 import com.fin.mobile.data.remote.dto.SchemeDto
 import com.fin.mobile.data.remote.dto.SchemeFaqsResponseDto
 import com.fin.mobile.data.remote.dto.SchemeRecommendationResponseDto
@@ -109,7 +110,7 @@ interface FinApiService {
     suspend fun getRecommendedSchemesPost(@Body body: @JvmSuppressWildcards Map<String, Any?> = emptyMap()): Response<SchemeRecommendationResponseDto>
 
     @GET("api/schemes/{id}")
-    suspend fun getSchemeById(@Path("id") schemeId: String): Response<SchemeDto>
+    suspend fun getSchemeById(@Path("id") schemeId: String): Response<SchemeDetailResponseDto>
 
     @GET("api/schemes/{slug}/faqs")
     suspend fun getSchemeFaqs(@Path("slug") slug: String): Response<SchemeFaqsResponseDto>

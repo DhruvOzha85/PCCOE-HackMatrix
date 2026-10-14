@@ -58,8 +58,10 @@ class SchemeDetailViewModel(
                             errorMessage = null
                         )
                     }
-                    val slugToFetch = scheme.slug ?: scheme.id
-                    loadFaqs(slugToFetch)
+                    val slugToFetch = scheme.slug?.takeIf { it.isNotBlank() } ?: scheme.id.takeIf { it.isNotBlank() }
+                    if (!slugToFetch.isNullOrBlank()) {
+                        loadFaqs(slugToFetch)
+                    }
                 }
                 is NetworkResult.Error -> {
                     _uiState.update {
@@ -127,10 +129,15 @@ class SchemeDetailViewModel(
                     }
                 }
                 is NetworkResult.Error -> {
+                    val msg = if (result.code == 401) {
+                        "Please log in to your account to evaluate your statutory eligibility against this scheme."
+                    } else {
+                        result.message.ifBlank { "Eligibility evaluation failed (${result.code})" }
+                    }
                     _uiState.update {
                         it.copy(
                             isEvaluatingEligibility = false,
-                            eligibilityError = result.message.ifBlank { "Eligibility evaluation failed (${result.code})" }
+                            eligibilityError = msg
                         )
                     }
                 }
