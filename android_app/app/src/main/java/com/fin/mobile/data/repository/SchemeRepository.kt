@@ -64,7 +64,19 @@ class SchemeRepositoryImpl(
     }
 
     override suspend fun getSchemeById(id: String): NetworkResult<SchemeDto> {
-        return safeApiCall(moshi) { apiService.getSchemeById(id) }
+        val result = safeApiCall(moshi) { apiService.getSchemeById(id) }
+        return when (result) {
+            is NetworkResult.Success -> {
+                val scheme = result.data.resolvedScheme
+                if (scheme != null) {
+                    NetworkResult.Success(scheme)
+                } else {
+                    NetworkResult.Error(404, "Scheme details not found")
+                }
+            }
+            is NetworkResult.Error -> NetworkResult.Error(result.code, result.message, result.errorBody)
+            is NetworkResult.Exception -> NetworkResult.Exception(result.throwable)
+        }
     }
 
     override suspend fun getSchemeFaqs(slug: String): NetworkResult<List<SchemeFaqDto>> {

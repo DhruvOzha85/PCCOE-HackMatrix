@@ -21,7 +21,10 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("String", "BASE_URL", "\"http://127.0.0.1:5000/\"")
+            val debugBaseUrl = (project.findProperty("BASE_URL") as? String)
+                ?: System.getenv("BASE_URL")
+                ?: "http://10.0.2.2:5000/"
+            buildConfigField("String", "BASE_URL", "\"$debugBaseUrl\"")
         }
 
         release {
